@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { addCar } from "../services/carService";
+import { useNavigate } from "react-router-dom";
+import { addCar, updateCar } from "../services/carService";
 
-function CarForm() {
+function CarForm({ editCar }) {
   const navigate = useNavigate();
 
   const [car, setCar] = useState({
@@ -16,6 +16,12 @@ function CarForm() {
     price: "",
   });
 
+  useEffect(() => {
+    if (editCar) {
+      setCar(editCar);
+    }
+  }, [editCar]);
+
   function handleChange(e) {
     setCar({
       ...car,
@@ -24,21 +30,24 @@ function CarForm() {
   }
 
   function handleSave() {
-    if (!car.name) {
+    if (!car.name.trim()) {
       alert("Ông nhập tên xe trước nhé 😄");
       return;
     }
 
-    addCar(car);
-
-    alert("✅ Đã lưu xe thành công!");
+    if (editCar) {
+      updateCar(car);
+      alert("✅ Đã cập nhật xe thành công!");
+    } else {
+      addCar(car);
+      alert("✅ Đã thêm xe thành công!");
+    }
 
     navigate("/cars");
   }
 
   return (
     <div className="form-container">
-
       <div className="form-group">
         <label>Tên xe</label>
         <input
@@ -67,19 +76,10 @@ function CarForm() {
       </div>
 
       <div className="form-group">
-        <label>Màu</label>
+        <label>Màu xe</label>
         <input
           name="color"
           value={car.color}
-          onChange={handleChange}
-        />
-      </div>
-
-      <div className="form-group">
-        <label>Giá</label>
-        <input
-          name="price"
-          value={car.price}
           onChange={handleChange}
         />
       </div>
@@ -115,13 +115,21 @@ function CarForm() {
         </select>
       </div>
 
+      <div className="form-group">
+        <label>Giá bán</label>
+        <input
+          name="price"
+          value={car.price}
+          onChange={handleChange}
+        />
+      </div>
+
       <button
         className="save-btn"
         onClick={handleSave}
       >
-        💾 Lưu xe
+        {editCar ? "💾 Cập nhật xe" : "💾 Lưu xe"}
       </button>
-
     </div>
   );
 }

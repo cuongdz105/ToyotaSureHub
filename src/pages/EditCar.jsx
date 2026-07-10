@@ -1,7 +1,14 @@
+import { useParams } from "react-router-dom";
+
 import Sidebar from "../components/Sidebar";
 import CarForm from "../components/CarForm";
+import { getCarById } from "../services/carService";
 
 function EditCar() {
+  const { id } = useParams();
+
+  const car = getCarById(id);
+
   return (
     <div className="app">
       <Sidebar />
@@ -9,7 +16,7 @@ function EditCar() {
       <main className="content">
         <h1>✏️ Sửa thông tin xe</h1>
 
-        <CarForm />
+        <CarForm editCar={car} />
       </main>
     </div>
   );
