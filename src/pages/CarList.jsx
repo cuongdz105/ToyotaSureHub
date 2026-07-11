@@ -9,9 +9,12 @@ function CarList() {
   const [cars, setCars] = useState(getCars());
   const [search, setSearch] = useState("");
 
-  const filteredCars = cars.filter((car) =>
-    car.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredCars = cars.filter((car) => {
+  const carName =
+    `${car.brand} ${car.model} ${car.version}`.toLowerCase();
+
+  return carName.includes(search.toLowerCase());
+});
 
   function handleDelete(id) {
     const ok = window.confirm("Ông chắc chắn muốn xóa xe này chứ?");
@@ -63,11 +66,14 @@ function CarList() {
           <tbody>
             {filteredCars.map((car) => (
               <tr key={car.id}>
-                <td>{car.name}</td>
+                <td>
+  {car.brand} {car.model} {car.version}
+</td>
                 <td>{car.year}</td>
                 <td>{car.color}</td>
-                <td>{car.price}</td>
-                <td>{car.odo}</td>
+               <td>{car.price} triệu</td>
+
+<td>{car.odo.toLocaleString()} km</td>
                 <td>{car.status}</td>
 
                 <td>

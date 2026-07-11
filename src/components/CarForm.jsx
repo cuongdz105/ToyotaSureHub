@@ -1,23 +1,47 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { addCar, updateCar } from "../services/carService";
+import { brands } from "../data/brands";
+import { colors } from "../data/colors";
+import { warranties } from "../data/warranty";
+import { legalTypes } from "../data/legal";
+import { statusList } from "../data/status";
 
 function CarForm({ editCar }) {
   const navigate = useNavigate();
 
-  const [car, setCar] = useState({
-    name: "",
-    version: "",
-    year: "",
-    color: "",
-    odo: "",
-    warranty: "",
-    legal: "Cá nhân",
-    price: "",
-    images: [],
-  });
+const [car, setCar] = useState({
+  name: "",          // 👈 Giữ lại tạm thời
+  brand: "Toyota",
+  model: "",
+  version: "",
+  year: "",
+  color: "",
+  odo: "",
+  warranty: "Toyota Sure",
+  legal: "Cá nhân",
+  price: "",
+  status: "🟢 Đang bán",
+  images: [],
+  notes: "",
+});
 
   const [previewImages, setPreviewImages] = useState([]);
+  const selectedBrand = brands.find(
+  (brand) => brand.name === car.brand
+);
+
+const models = selectedBrand
+  ? selectedBrand.models
+  : [];
+
+const selectedModel = models.find(
+  (model) => model.name === car.model
+);
+
+const versions = selectedModel
+  ? selectedModel.versions
+  : [];
 
   useEffect(() => {
     if (editCar) {
@@ -53,10 +77,10 @@ function CarForm({ editCar }) {
   }
 
   function handleSave() {
-    if (!car.name.trim()) {
-      alert("Vui lòng nhập tên xe!");
-      return;
-    }
+   if (!car.brand) {
+  alert("Vui lòng chọn hãng xe!");
+  return;
+}
 
     if (!car.year) {
       alert("Vui lòng nhập năm sản xuất!");
@@ -88,26 +112,63 @@ function CarForm({ editCar }) {
     <div className="form-container">
 
       <div className="form-group">
-        <label>Tên xe</label>
-        <input
-          name="name"
-          value={car.name}
-          onChange={handleChange}
-          placeholder="Toyota Vios G CVT"
-        />
-      </div>
+        <label>Hãng xe</label>
+       <select
+  name="brand"
+  value={car.brand}
+  onChange={handleChange}
+>
+  {brands.map((brand) => (
+    <option
+      key={brand.name}
+      value={brand.name}
+    >
+      {brand.name}
+    </option>
+  ))}
+</select>
+</div>
+<div className="form-group">
+  <label>Dòng xe</label>
 
-      <div className="form-group">
-        <label>Phiên bản</label>
-        <input
-          name="version"
-          value={car.version}
-          onChange={handleChange}
-          placeholder="1.5G CVT"
-        />
-      </div>
+  <select
+    name="model"
+    value={car.model}
+    onChange={handleChange}
+  >
+    <option value="">-- Chọn dòng xe --</option>
 
-      <div className="form-group">
+    {models.map((model) => (
+      <option
+        key={model.name}
+        value={model.name}
+      >
+        {model.name}
+      </option>
+    ))}
+  </select>
+</div>
+    <div className="form-group">
+  <label>Phiên bản</label>
+
+  <select
+    name="version"
+    value={car.version}
+    onChange={handleChange}
+  >
+    <option value="">-- Chọn phiên bản --</option>
+
+    {versions.map((version) => (
+      <option
+        key={version.name}
+        value={version.name}
+      >
+        {version.name}
+      </option>
+    ))}
+  </select>
+</div>
+<div className="form-group">
         <label>Năm sản xuất</label>
         <input
           type="number"

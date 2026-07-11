@@ -1,62 +1,71 @@
-const STORAGE_KEY = "toyota_cars";
+import {
+  loadCars,
+  saveCars,
+} from "./storageService";
 
 const defaultCars = [
   {
     id: 1,
-    name: "Toyota Vios G",
-    version: "",
+    brand: "Toyota",
+    model: "Vios",
+    version: "G CVT",
     year: 2023,
     color: "Đen",
-    odo: "12.000 km",
-    warranty: "",
+    odo: 12000,
+    warranty: "Toyota Sure",
     legal: "Cá nhân",
-    price: "520 triệu",
-    status: "Đang bán",
+    price: 520,
+    status: "🟢 Đang bán",
+    images: [],
+    notes: "",
   },
+
   {
     id: 2,
-    name: "Corolla Cross HEV",
-    version: "",
+    brand: "Toyota",
+    model: "Corolla Cross",
+    version: "HEV",
     year: 2025,
     color: "Trắng ngọc trai",
-    odo: "8.000 km",
-    warranty: "",
+    odo: 8000,
+    warranty: "Toyota Sure",
     legal: "Cá nhân",
-    price: "935 triệu",
-    status: "Đang bán",
+    price: 935,
+    status: "🟢 Đang bán",
+    images: [],
+    notes: "",
   },
+
   {
     id: 3,
-    name: "Raize",
-    version: "",
+    brand: "Toyota",
+    model: "Raize",
+    version: "Turbo",
     year: 2022,
     color: "Đỏ",
-    odo: "55.000 km",
-    warranty: "",
+    odo: 55000,
+    warranty: "Toyota Sure",
     legal: "Cá nhân",
-    price: "498 triệu",
-    status: "Đang bán",
+    price: 498,
+    status: "🟢 Đang bán",
+    images: [],
+    notes: "",
   },
 ];
-
 export function getCars() {
-  const data = localStorage.getItem(STORAGE_KEY);
+  const cars = loadCars();
 
-  if (data) {
-    return JSON.parse(data);
+  if (cars.length > 0) {
+    return cars;
   }
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultCars));
+  saveCars(defaultCars);
 
   return defaultCars;
 }
 
 export function getCarById(id) {
   return getCars().find((car) => car.id === Number(id));
-}
-
-export function saveCars(cars) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(cars));
 }
 
 export function addCar(car) {
