@@ -6,17 +6,13 @@ function Sidebar() {
     <aside className="sidebar">
       <h2>🚗 ToyotaSureHub</h2>
 
-      <Link to="/">
-        <Link to="/">
+     <Link to="/">
   <button>📋 Dashboard</button>
 </Link>
-      </Link>
 
       <Link to="/cars">
-        <Link to="/cars">
   <button>🚗 Quản lý xe</button>
 </Link>
-      </Link>
 
       <button>👥 Khách hàng</button>
       <button>🤖 AI Đăng bài</button>
