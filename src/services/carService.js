@@ -72,10 +72,9 @@ export function addCar(car) {
   const cars = getCars();
 
   cars.push({
-    id: Date.now(),
-    ...car,
-    status: "Đang bán",
-  });
+  ...car,
+  id: Date.now(),
+});
 
   saveCars(cars);
 }

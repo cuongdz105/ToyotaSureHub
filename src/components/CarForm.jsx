@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { addCar } from "../services/carService";
+import { addCar, updateCar } from "../services/carService";
 
 import { brands } from "../data/brands";
 import { colors } from "../data/colors";
 import { warranties } from "../data/warranty";
 import { legalTypes } from "../data/legal";
 import { statusList } from "../data/status";
+import ImageUploader from "./ImageUploader";
 
 function CarForm({ editCar }) {
   const navigate = useNavigate();
@@ -78,11 +79,17 @@ function CarForm({ editCar }) {
       return;
     }
 
-    addCar(car);
+   if (editCar) {
+  updateCar(car);
 
-    alert("✅ Đã lưu xe");
+  alert("✅ Đã cập nhật xe");
+} else {
+  addCar(car);
 
-    navigate("/cars");
+  alert("✅ Đã thêm xe");
+}
+
+navigate("/cars");
   }
 
   return (
@@ -333,11 +340,20 @@ checked={car.engineOriginal}
           rows="4"
         />
       </div>
-
+ <ImageUploader
+  images={car.images}
+  setImages={(images) =>
+    setCar({
+      ...car,
+      images,
+    })
+  }
+/>
       <button
         className="save-btn"
         onClick={handleSave}
       >
+       
         💾 Lưu xe
       </button>
 
