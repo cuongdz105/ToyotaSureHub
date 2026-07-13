@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import imageCompression from "browser-image-compression";
 
 function ImageUploader({ images = [], setImages }) {
   const fileInputRef = useRef(null);
@@ -9,9 +10,21 @@ function ImageUploader({ images = [], setImages }) {
   if (files.length === 0) return;
 
   const newImages = await Promise.all(
-    files.map(
-      (file) =>
-        new Promise((resolve) => {
+  files.map(async (file) => 
+        new Promise(async (resolve) => {
+
+            const options = {
+  maxSizeMB: 0.3,
+  maxWidthOrHeight: 1600,
+  useWebWorker: true,
+};
+
+const compressedFile = await imageCompression(
+  file,
+  options
+);
+
+
           const reader = new FileReader();
 
           reader.onload = () => {
@@ -22,10 +35,11 @@ function ImageUploader({ images = [], setImages }) {
             });
           };
 
-          reader.readAsDataURL(file);
+          reader.readAsDataURL(compressedFile);
         })
     )
   );
+
 
   setImages([...images, ...newImages]);
 }

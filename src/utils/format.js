@@ -13,7 +13,7 @@ export function formatPrice(price) {
 export function formatOdo(odo) {
   if (!odo) return "";
 
-  return Number(odo).toLocaleString("vi-VN") + " km";
+  return (Number(odo) * 10000).toLocaleString("vi-VN") + " km";
 }
 
 // =========================

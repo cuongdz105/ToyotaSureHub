@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { getCarById } from "../services/carService";
 import Gallery from "../components/Gallery/Gallery";
+import "../styles/CarDetail.css";
 
 function CarDetail() {
   const { id } = useParams();
@@ -27,6 +28,21 @@ function CarDetail() {
 
       <main className="content">
         <h1>🚗 Chi tiết xe</h1>
+
+       
+        <div className="action-bar">
+  <button className="btn-back">⬅ Quay lại</button>
+
+  <button className="btn-edit">✏️ Sửa</button>
+
+  <button className="btn-delete">🗑 Xóa</button>
+
+  <button className="btn-ai">🤖 Toyota AI</button>
+
+  <button className="btn-video">🎥 Video</button>
+
+  <button className="btn-post">📱 Facebook</button>
+</div>
 
    <h2>
   {car.brand} {car.model} {car.version}

@@ -1,8 +1,12 @@
 import Sidebar from "../components/Sidebar";
 import DashboardCard from "../components/DashboardCard";
-import dashboardData from "../data/dashboardData";
+import { getDashboardData } from "../services/dashboardService";
 
-function Dashboard() {
+  function Dashboard() {
+
+  const dashboardData = getDashboardData();
+
+
   return (
     <div className="app">
       <Sidebar />
