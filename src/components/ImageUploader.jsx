@@ -3,20 +3,32 @@ import { useRef } from "react";
 function ImageUploader({ images = [], setImages }) {
   const fileInputRef = useRef(null);
 
-  function handleSelectFiles(e) {
-    const files = Array.from(e.target.files);
+  async function handleSelectFiles(e) {
+  const files = Array.from(e.target.files);
 
-    if (files.length === 0) return;
+  if (files.length === 0) return;
 
-    const newImages = files.map((file) => ({
-      id: Date.now() + Math.random(),
-      file,
-      preview: URL.createObjectURL(file),
-      name: file.name,
-    }));
+  const newImages = await Promise.all(
+    files.map(
+      (file) =>
+        new Promise((resolve) => {
+          const reader = new FileReader();
 
-    setImages([...images, ...newImages]);
-  }
+          reader.onload = () => {
+            resolve({
+              id: Date.now() + Math.random(),
+              preview: reader.result,
+              name: file.name,
+            });
+          };
+
+          reader.readAsDataURL(file);
+        })
+    )
+  );
+
+  setImages([...images, ...newImages]);
+}
 
   function handleRemove(id) {
     setImages(images.filter((img) => img.id !== id));

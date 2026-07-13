@@ -2,6 +2,7 @@ import { useParams } from "react-router-dom";
 
 import Sidebar from "../components/Sidebar";
 import { getCarById } from "../services/carService";
+import Gallery from "../components/Gallery/Gallery";
 
 function CarDetail() {
   const { id } = useParams();
@@ -27,9 +28,13 @@ function CarDetail() {
       <main className="content">
         <h1>🚗 Chi tiết xe</h1>
 
-        <h2>
-          {car.brand} {car.model} {car.version}
-        </h2>
+   <h2>
+  {car.brand} {car.model} {car.version}
+</h2>
+
+<Gallery images={car.images} />
+
+<hr />
 
         <hr />
 

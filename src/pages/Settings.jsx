@@ -29,6 +29,47 @@ function Settings() {
     alert("✅ Backup thành công!");
   }
 
+function handleRestore(e) {
+  const file = e.target.files[0];
+
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function (event) {
+    try {
+      const cars = JSON.parse(event.target.result);
+
+      localStorage.setItem(
+        "toyota_sure_hub_cars",
+        JSON.stringify(cars)
+      );
+
+      alert("✅ Khôi phục dữ liệu thành công!");
+
+      window.location.href = "/cars";
+    } catch {
+      alert("❌ File không hợp lệ.");
+    }
+  };
+
+  reader.readAsText(file);
+}
+
+function handleClear() {
+  const ok = window.confirm(
+    "Ông có chắc chắn muốn xóa toàn bộ dữ liệu không?"
+  );
+
+  if (!ok) return;
+
+  localStorage.removeItem("toyota_sure_hub_cars");
+
+  alert("🗑️ Đã xóa toàn bộ dữ liệu.");
+
+  window.location.href = "/cars";
+}
+
   return (
     <div className="app">
       <Sidebar />
@@ -43,6 +84,35 @@ function Settings() {
           >
             💾 Backup dữ liệu
           </button>
+         <input
+  type="file"
+  id="restoreFile"
+  accept=".json"
+  style={{ display: "none" }}
+  onChange={handleRestore}
+/>
+
+<button
+  className="save-btn"
+  style={{ marginTop: "15px" }}
+  onClick={() =>
+    document
+      .getElementById("restoreFile")
+      .click()
+  }
+>
+  📂 Khôi phục dữ liệu
+</button>
+<button
+  className="save-btn"
+  style={{
+    marginTop: "15px",
+    background: "#dc2626",
+  }}
+  onClick={handleClear}
+>
+  🗑️ Xóa toàn bộ dữ liệu
+</button>
         </div>
       </main>
     </div>
