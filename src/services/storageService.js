@@ -18,3 +18,6 @@ export function saveCars(cars) {
 export function clearCars() {
   localStorage.removeItem(STORAGE_KEY);
 }
+export function exportCars() {
+  return loadCars();
+}

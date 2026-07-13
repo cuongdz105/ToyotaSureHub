@@ -22,6 +22,16 @@ function ImageUploader({ images = [], setImages }) {
     setImages(images.filter((img) => img.id !== id));
   }
 
+  function handleSetCover(id) {
+  const selected = images.find((img) => img.id === id);
+
+  if (!selected) return;
+
+  const others = images.filter((img) => img.id !== id);
+
+  setImages([selected, ...others]);
+}
+
   return (
     <div className="form-group">
       <label>📷 Hình ảnh xe</label>
@@ -68,7 +78,38 @@ function ImageUploader({ images = [], setImages }) {
                 border: "1px solid #ddd",
               }}
             />
-
+<div
+  style={{
+    marginTop: "6px",
+    textAlign: "center",
+  }}
+>
+  {images[0]?.id === img.id ? (
+    <span
+      style={{
+        color: "#16a34a",
+        fontWeight: "bold",
+        fontSize: "13px",
+      }}
+    >
+      ⭐ Ảnh bìa
+    </span>
+  ) : (
+    <button
+      type="button"
+      onClick={() => handleSetCover(img.id)}
+      style={{
+        fontSize: "12px",
+        border: "none",
+        background: "transparent",
+        color: "#2563eb",
+        cursor: "pointer",
+      }}
+    >
+      Đặt làm ảnh bìa
+    </button>
+  )}
+</div>
             <button
               type="button"
               onClick={() => handleRemove(img.id)}

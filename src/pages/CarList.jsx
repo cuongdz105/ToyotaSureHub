@@ -116,7 +116,7 @@ function CarList() {
                 <td>{car.color}</td>
                <td>{car.price} triệu</td>
 
-<td>{(Number(car.odo) * 10000).toLocaleString("vi-VN")} km</td>
+<td>{Number(car.odo).toLocaleString("vi-VN")} km</td>
                 <td>{car.status}</td>
 
                 <td>

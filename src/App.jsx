@@ -6,6 +6,7 @@ import CarList from "./pages/CarList";
 import AddCar from "./pages/AddCar";
 import EditCar from "./pages/EditCar";
 import CarDetail from "./pages/CarDetail";
+import Settings from "./pages/Settings";
 
 function App() {
   return (
@@ -14,12 +15,18 @@ function App() {
       <Route path="/cars" element={<CarList />} />
       <Route path="/cars/new" element={<AddCar />} />
       <Route path="/edit/:id" element={<EditCar />} />
+    
       <Route
   path="/cars/:id"
   element={<CarDetail />}
 />
+<Route
+  path="/settings"
+  element={<Settings />}
+  />
     </Routes>
   );
 }
+ 
 
 export default App;
