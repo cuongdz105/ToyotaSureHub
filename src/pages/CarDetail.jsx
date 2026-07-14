@@ -4,11 +4,18 @@ import Sidebar from "../components/Sidebar";
 import { getCarById } from "../services/carService";
 import Gallery from "../components/Gallery/Gallery";
 import "../styles/CarDetail.css";
+import { generateFacebookPost } from "../services/aiService";
 
 function CarDetail() {
   const { id } = useParams();
 
   const car = getCarById(id);
+
+  const handleToyotaAI = async () => {
+  const result = await generateFacebookPost(car);
+
+  alert(result);
+};
 
   if (!car) {
     return (
@@ -37,7 +44,12 @@ function CarDetail() {
 
   <button className="btn-delete">🗑 Xóa</button>
 
-  <button className="btn-ai">🤖 Toyota AI</button>
+  <button
+  className="btn-ai"
+  onClick={handleToyotaAI}
+>
+  🤖 Toyota AI
+</button>
 
   <button className="btn-video">🎥 Video</button>
 
