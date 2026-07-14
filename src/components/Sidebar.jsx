@@ -13,7 +13,9 @@ function Sidebar() {
         <button>🚗 Quản lý xe</button>
       </Link>
 
-      <button>👥 Khách hàng</button>
+      <Link to="/customers">
+  <button>👥 Khách hàng</button>
+</Link>
 
       <button>🤖 AI Đăng bài</button>
 

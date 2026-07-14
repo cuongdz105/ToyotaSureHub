@@ -7,6 +7,7 @@ import AddCar from "./pages/AddCar";
 import EditCar from "./pages/EditCar";
 import CarDetail from "./pages/CarDetail";
 import Settings from "./pages/Settings";
+import Customers from "./pages/Customers";
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
       <Route path="/cars" element={<CarList />} />
       <Route path="/cars/new" element={<AddCar />} />
       <Route path="/edit/:id" element={<EditCar />} />
+      <Route path="/customers" element={<Customers />} />
     
       <Route
   path="/cars/:id"
