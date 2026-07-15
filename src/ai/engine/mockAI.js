@@ -1,31 +1,42 @@
 // =======================================
 // Toyota AI Mock Engine
-// Version 1.0
+// Version 2.0
 // =======================================
 
-export async function mockAI(prompt) {
+export async function mockAI(prompt, car) {
 
+    console.log("===== TOYOTA AI PROMPT =====");
     console.log(prompt);
 
-    // Giả lập AI đang suy nghĩ
+    // Giả lập AI suy nghĩ
     await new Promise(resolve =>
         setTimeout(resolve, 1200)
     );
 
     return `
+🚗 ${car.brand} ${car.model} ${car.version}
 
-🤖 Đây là kết quả từ Toyota AI.
+✨ Xe ${car.year} màu ${car.color} vừa cập bến Toyota Sure Mỹ Đình.
 
-==================================
+✅ ODO chỉ ${(Number(car.odo) * 10000).toLocaleString("vi-VN")} km.
 
-Prompt nhận được:
+💰 Giá bán: ${car.price} triệu.
 
-${prompt}
+✔️ ${car.warranty}
 
-==================================
+✔️ ${car.legal}
 
-Sau này phần này sẽ được thay bằng OpenAI API.
+🔍 Đã kiểm định 176 hạng mục Toyota Sure.
 
+💯 Cam kết:
+
+• Không tai nạn
+
+• Không ngập nước
+
+• Không bổ máy
+
+📞 Liên hệ ngay Toyota Sure Mỹ Đình để xem xe và lái thử!
 `;
 
 }

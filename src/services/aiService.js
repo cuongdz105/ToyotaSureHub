@@ -4,116 +4,54 @@
 // ================================
 
 import { buildCarName } from "../utils/format";
+import { buildPrompt } from "../ai/engine/promptBuilder";
+import { runAI } from "../ai/engine/aiEngine";
+
+import facebookPrompt from "../ai/prompts/facebook";
+import youtubePrompt from "../ai/prompts/youtube";
+import tiktokPrompt from "../ai/prompts/tiktok";
+import seoPrompt from "../ai/prompts/seo";
 
 // ================================
 // Prompt Builder V2.0
 // ================================
 
-function buildPrompt(car, type) {
-  return `
-Bạn là chuyên gia Marketing của Toyota Sure Mỹ Đình.
-
-Nhiệm vụ:
-${type}
-
-========================
-
-THÔNG TIN XE
-
-Tên xe:
-${buildCarName(car)}
-
-Năm:
-${car.year}
-
-Màu:
-${car.color}
-
-ODO:
-${car.odo.toLocaleString("vi-VN")} km
-
-Giá:
-${car.price} triệu
-
-Bảo hành:
-${car.warranty}
-
-Pháp lý:
-${car.legal}
-
-========================
-
-THÔNG TIN TOYOTA SURE
-
-- Kiểm định 176 hạng mục
-
-- Cam kết:
-+ Không tai nạn
-+ Không bổ máy
-+ Không ngập nước
-
-- Hỗ trợ trả góp
-
-========================
-
-Yêu cầu:
-
-Viết chuyên nghiệp.
-
-Không dùng icon quá nhiều.
-
-Có Call To Action cuối bài.
-`;
-}
 
 // ================================
 // Mock AI
 // ================================
 
-async function mockAI(prompt) {
-  console.log(prompt);
 
-  return `
-Đây là nội dung AI mô phỏng.
-
-Sau này sẽ thay bằng ChatGPT API.
-
-Prompt:
-
-${prompt}
-`;
-}
-
-export async function generateYoutubeContent(car){
+export async function generateYoutubeContent(car) {
 
     const prompt = buildPrompt(
         car,
-        "Viết tiêu đề Youtube, mô tả và hashtag."
+        youtubePrompt
     );
 
-    return mockAI(prompt);
+    return await runAI(prompt);
 
 }
 
-export async function generateSeoArticle(car){
+export async function generateSeoArticle(car) {
 
     const prompt = buildPrompt(
         car,
-        "Viết bài chuẩn SEO khoảng 800 từ."
+        seoPrompt
     );
 
-    return mockAI(prompt);
+    return await runAI(prompt);
 
 }
 
-export async function generateTikTokScript(car){
+export async function generateTikTokScript(car) {
 
     const prompt = buildPrompt(
         car,
-        "Viết kịch bản TikTok khoảng 60 giây."
+        tiktokPrompt
     );
 
-    return mockAI(prompt);
+    return await runAI(prompt);
 
 }
 
@@ -121,9 +59,9 @@ export async function generateFacebookPost(car) {
 
     const prompt = buildPrompt(
         car,
-        "Viết bài Facebook khoảng 300 từ."
+        facebookPrompt
     );
 
-    return mockAI(prompt);
+    return await runAI(prompt, car);
 
 }

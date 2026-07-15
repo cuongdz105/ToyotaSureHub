@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 
 import Sidebar from "../components/Sidebar";
@@ -5,16 +6,46 @@ import { getCarById } from "../services/carService";
 import Gallery from "../components/Gallery/Gallery";
 import "../styles/CarDetail.css";
 import { generateFacebookPost } from "../services/aiService";
+import AIResultModal from "../components/AIResultModal";
+
 
 function CarDetail() {
   const { id } = useParams();
 
   const car = getCarById(id);
 
-  const handleToyotaAI = async () => {
-  const result = await generateFacebookPost(car);
+  const [showAI, setShowAI] = useState(false);
+const [aiTitle, setAiTitle] = useState("");
+const [aiContent, setAiContent] = useState("");
+const [loadingAI, setLoadingAI] = useState(false);
 
-  alert(result);
+  const handleToyotaAI = async () => {
+
+  try {
+
+    setLoadingAI(true);
+    setShowAI(true);
+
+    const result = await generateFacebookPost(car);
+
+    setAiTitle("🤖 Toyota AI - Facebook");
+
+    setAiContent(result);
+
+  } catch (error) {
+
+    setAiTitle("Lỗi");
+
+    setAiContent("Không thể tạo nội dung AI.");
+
+    console.error(error);
+
+  } finally {
+
+    setLoadingAI(false);
+
+  }
+
 };
 
   if (!car) {
@@ -74,6 +105,16 @@ function CarDetail() {
         <p><b>Pháp lý:</b> {car.legal}</p>
         <p><b>Trạng thái:</b> {car.status}</p>
       </main>
+<AIResultModal
+    open={showAI}
+    title={aiTitle}
+    content={aiContent}
+    loading={loadingAI}
+    onClose={() => setShowAI(false)}
+    onCopy={() => navigator.clipboard.writeText(aiContent)}
+    onRegenerate={() => {}}
+/>
+
     </div>
   );
 }
