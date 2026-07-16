@@ -65,3 +65,47 @@ export async function generateFacebookPost(car) {
     return await runAI(prompt, car);
 
 }
+
+export async function generateYoutube(car) {
+
+    const prompt = buildPrompt(
+        car,
+        "Viết tiêu đề Youtube, mô tả Youtube và hashtag."
+    );
+
+    return runAI(prompt, car);
+
+}
+
+export async function generateTikTok(car) {
+
+    const prompt = buildPrompt(
+        car,
+        "Viết kịch bản TikTok khoảng 60 giây."
+    );
+
+    return runAI(prompt, car);
+
+}
+
+export async function generateSEO(car) {
+
+    const prompt = buildPrompt(
+        car,
+        "Viết bài chuẩn SEO khoảng 800 từ."
+    );
+
+    return runAI(prompt, car);
+
+}
+
+export async function generateThumbnail(car) {
+
+    const prompt = buildPrompt(
+        car,
+        "Viết 10 tiêu đề Thumbnail Youtube thật thu hút."
+    );
+
+    return runAI(prompt, car);
+
+}

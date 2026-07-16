@@ -5,8 +5,15 @@ import Sidebar from "../components/Sidebar";
 import { getCarById } from "../services/carService";
 import Gallery from "../components/Gallery/Gallery";
 import "../styles/CarDetail.css";
-import { generateFacebookPost } from "../services/aiService";
+import {
+    generateFacebookPost,
+    generateYoutube,
+    generateTikTok,
+    generateSEO,
+    generateThumbnail
+} from "../services/aiService";
 import AIResultModal from "../components/AIResultModal";
+import AIMenu from "../components/AIMenu";
 
 
 function CarDetail() {
@@ -18,14 +25,24 @@ function CarDetail() {
 const [aiTitle, setAiTitle] = useState("");
 const [aiContent, setAiContent] = useState("");
 const [loadingAI, setLoadingAI] = useState(false);
+const [showMenu, setShowMenu] = useState(false);
 
-  const handleToyotaAI = async () => {
+const aiActions = {
+    facebook: generateFacebookPost,
+    youtube: generateYoutube,
+    tiktok: generateTikTok,
+    seo: generateSEO,
+    thumbnail: generateThumbnail
+};
 
-  try {
+const handleToyotaAI = async () => {
+
+      try {
 
     setLoadingAI(true);
     setShowAI(true);
 
+   
     const result = await generateFacebookPost(car);
 
     setAiTitle("🤖 Toyota AI - Facebook");
@@ -45,6 +62,22 @@ const [loadingAI, setLoadingAI] = useState(false);
     setLoadingAI(false);
 
   }
+
+};
+
+
+const handleYoutubeAI = async () => {
+
+    setLoadingAI(true);
+    setShowAI(true);
+
+    const result = await generateYoutube(car);
+
+    setAiTitle("YouTube AI");
+
+    setAiContent(result);
+
+    setLoadingAI(false);
 
 };
 
@@ -76,13 +109,18 @@ const [loadingAI, setLoadingAI] = useState(false);
   <button className="btn-delete">🗑 Xóa</button>
 
   <button
-  className="btn-ai"
-  onClick={handleToyotaAI}
+    className="btn-ai"
+    onClick={() => setShowMenu(true)}
 >
-  🤖 Toyota AI
+    🤖 Toyota AI
 </button>
 
-  <button className="btn-video">🎥 Video</button>
+  <button
+    className="btn-video"
+    onClick={handleYoutubeAI}
+>
+    🎥 Video
+</button>
 
   <button className="btn-post">📱 Facebook</button>
 </div>
@@ -105,6 +143,28 @@ const [loadingAI, setLoadingAI] = useState(false);
         <p><b>Pháp lý:</b> {car.legal}</p>
         <p><b>Trạng thái:</b> {car.status}</p>
       </main>
+
+<AIMenu
+    open={showMenu}
+    onClose={() => setShowMenu(false)}
+
+    onFacebook={() => {
+        setShowMenu(false);
+        handleToyotaAI();
+    }}
+
+    onYoutube={() => {
+        setShowMenu(false);
+        handleYoutubeAI();
+    }}
+
+    onTikTok={() => {}}
+
+    onSEO={() => {}}
+
+    onThumbnail={() => {}}
+/>
+
 <AIResultModal
     open={showAI}
     title={aiTitle}
