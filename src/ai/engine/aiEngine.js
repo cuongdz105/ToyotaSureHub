@@ -2,13 +2,9 @@
 // Toyota AI Engine
 // =======================================
 
-import { mockAI } from "./mockAI";
-
-
-
-// Sau này chỉ cần đổi provider ở đây
-const provider = "mock";
+import { AI_PROVIDER } from "./config";
+import { providers } from "./registry";
 
 export async function runAI(prompt, car) {
-    return mockAI(prompt, car);
+    return providers[AI_PROVIDER].generate(prompt, car);
 }

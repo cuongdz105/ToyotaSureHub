@@ -1,0 +1,49 @@
+.ai-workspace{
+
+    padding:30px;
+
+}
+
+.workspace-header{
+
+    margin-bottom:25px;
+
+}
+
+.workspace-body{
+
+    display:flex;
+
+    gap:25px;
+
+}
+
+.workspace-left{
+
+    width:260px;
+
+    background:#fff;
+
+    border-radius:12px;
+
+    padding:20px;
+
+    box-shadow:0 5px 15px rgba(0,0,0,.08);
+
+}
+
+.workspace-right{
+
+    flex:1;
+
+    background:#fff;
+
+    border-radius:12px;
+
+    padding:25px;
+
+    min-height:600px;
+
+    box-shadow:0 5px 15px rgba(0,0,0,.08);
+
+}

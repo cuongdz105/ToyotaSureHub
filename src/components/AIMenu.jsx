@@ -1,3 +1,5 @@
+import "../styles/AIMenu.css";
+
 function AIMenu({
 
     open,
@@ -26,29 +28,30 @@ function AIMenu({
 
                 <h2>🤖 Toyota AI</h2>
 
-                <div className="ai-menu">
+               <div className="ai-card" onClick={onFacebook}>
+    <h3>📱 Facebook</h3>
+    <p>Viết bài bán xe chuẩn hội nhóm.</p>
+</div>
 
-                    <button onClick={onFacebook}>
-                        📱 Facebook
-                    </button>
+<div className="ai-card" onClick={onYoutube}>
+    <h3>🎥 YouTube</h3>
+    <p>Tiêu đề + mô tả + hashtag SEO.</p>
+</div>
 
-                    <button onClick={onYoutube}>
-                        🎥 YouTube
-                    </button>
+<div className="ai-card" onClick={onTikTok}>
+    <h3>🎬 TikTok</h3>
+    <p>Kịch bản video 60 giây.</p>
+</div>
 
-                    <button onClick={onTikTok}>
-                        🎬 TikTok
-                    </button>
+<div className="ai-card" onClick={onSEO}>
+    <h3>📰 SEO</h3>
+    <p>Bài viết chuẩn Google.</p>
+</div>
 
-                    <button onClick={onSEO}>
-                        📰 SEO
-                    </button>
-
-                    <button onClick={onThumbnail}>
-                        🖼 Thumbnail
-                    </button>
-
-                </div>
+<div className="ai-card" onClick={onThumbnail}>
+    <h3>🖼 Thumbnail</h3>
+    <p>Tiêu đề thumbnail tăng CTR.</p>
+</div>
 
                 <br />
 

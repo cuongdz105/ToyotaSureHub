@@ -27,13 +27,6 @@ const [aiContent, setAiContent] = useState("");
 const [loadingAI, setLoadingAI] = useState(false);
 const [showMenu, setShowMenu] = useState(false);
 
-const aiActions = {
-    facebook: generateFacebookPost,
-    youtube: generateYoutube,
-    tiktok: generateTikTok,
-    seo: generateSEO,
-    thumbnail: generateThumbnail
-};
 
 const handleToyotaAI = async () => {
 
@@ -81,6 +74,51 @@ const handleYoutubeAI = async () => {
 
 };
 
+const handleTikTokAI = async () => {
+
+  setLoadingAI(true);
+  setShowAI(true);
+
+  const result = await generateTikTok(car);
+
+  setAiTitle("🎬 TikTok AI");
+
+  setAiContent(result);
+
+  setLoadingAI(false);
+
+};
+
+const handleSEOAI = async () => {
+
+    setLoadingAI(true);
+    setShowAI(true);
+
+    const result = await generateSEO(car);
+
+    setAiTitle("📰 SEO AI");
+
+    setAiContent(result);
+
+    setLoadingAI(false);
+
+};
+
+const handleThumbnailAI = async () => {
+
+    setLoadingAI(true);
+    setShowAI(true);
+
+    const result = await generateThumbnail(car);
+
+    setAiTitle("🖼 Thumbnail AI");
+
+    setAiContent(result);
+
+    setLoadingAI(false);
+
+};
+
   if (!car) {
     return (
       <div className="app">
@@ -115,14 +153,7 @@ const handleYoutubeAI = async () => {
     🤖 Toyota AI
 </button>
 
-  <button
-    className="btn-video"
-    onClick={handleYoutubeAI}
->
-    🎥 Video
-</button>
-
-  <button className="btn-post">📱 Facebook</button>
+ 
 </div>
 
    <h2>
@@ -158,11 +189,20 @@ const handleYoutubeAI = async () => {
         handleYoutubeAI();
     }}
 
-    onTikTok={() => {}}
+   onTikTok={() => {
+    setShowMenu(false);
+    handleTikTokAI();
+}}
 
-    onSEO={() => {}}
+onSEO={() => {
+    setShowMenu(false);
+    handleSEOAI();
+}}
 
-    onThumbnail={() => {}}
+onThumbnail={() => {
+    setShowMenu(false);
+    handleThumbnailAI();
+}}
 />
 
 <AIResultModal
