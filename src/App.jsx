@@ -8,6 +8,7 @@ import EditCar from "./pages/EditCar";
 import CarDetail from "./pages/CarDetail";
 import Settings from "./pages/Settings";
 import Customers from "./pages/Customers";
+import AIHistory from "./pages/AIHistory";
 
 function App() {
   return (
@@ -26,6 +27,12 @@ function App() {
   path="/settings"
   element={<Settings />}
   />
+
+<Route
+  path="/ai-history"
+  element={<AIHistory />}
+/>
+
     </Routes>
   );
 }

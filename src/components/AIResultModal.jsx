@@ -8,6 +8,7 @@ function AIResultModal({
   onClose,
   onCopy,
   onRegenerate,
+  onDownload,
 }) {
   if (!open) return null;
 
@@ -42,20 +43,24 @@ function AIResultModal({
         <div className="ai-footer">
 
           {!loading && (
-            <>
-              <button onClick={onCopy}>
-                📋 Copy
-              </button>
+  <>
+    <button onClick={onCopy}>
+      📋 Copy
+    </button>
 
-              <button onClick={onRegenerate}>
-                🔄 Tạo lại
-              </button>
-            </>
-          )}
+    <button onClick={onDownload}>
+      💾 Download
+    </button>
 
-          <button onClick={onClose}>
-            ❌ Đóng
-          </button>
+    <button onClick={onRegenerate}>
+      🔄 Tạo lại
+    </button>
+  </>
+)}
+
+<button onClick={onClose}>
+  ❌ Đóng
+</button>
 
         </div>
 
