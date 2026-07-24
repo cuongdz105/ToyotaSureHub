@@ -17,7 +17,9 @@ function Sidebar() {
   <button>👥 Khách hàng</button>
 </Link>
 
-      <button>🤖 AI Đăng bài</button>
+      <Link to="/ai-workspace">
+    <button>🤖 Toyota AI</button>
+</Link>
 
       <button>📊 Báo cáo</button>
 

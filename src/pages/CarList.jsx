@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import Sidebar from "../components/Sidebar";
 import { getCars, deleteCar } from "../services/carService";
 
 function CarList() {
@@ -56,8 +55,7 @@ function CarList() {
 
   return (
     <div className="app">
-      <Sidebar />
-
+      
       <main className="content">
         <div className="topbar">
           <h1>Quản lý xe</h1>

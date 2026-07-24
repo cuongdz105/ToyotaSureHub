@@ -1,4 +1,3 @@
-import Sidebar from "../components/Sidebar";
 import DashboardCard from "../components/DashboardCard";
 import { getDashboardData } from "../services/dashboardService";
 
@@ -9,8 +8,7 @@ import { getDashboardData } from "../services/dashboardService";
 
   return (
     <div className="app">
-      <Sidebar />
-
+      
       <main className="content">
         <header className="topbar">
           <h1>Dashboard</h1>

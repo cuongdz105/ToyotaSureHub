@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 
-import Sidebar from "../components/Sidebar";
 import { getCarById } from "../services/carService";
 import Gallery from "../components/Gallery/Gallery";
 import "../styles/CarDetail.css";
@@ -172,8 +171,7 @@ const handleDownloadAI = () => {
   if (!car) {
     return (
       <div className="app">
-        <Sidebar />
-
+        
         <main className="content">
           <h2>❌ Không tìm thấy xe</h2>
         </main>
@@ -183,8 +181,7 @@ const handleDownloadAI = () => {
 
   return (
     <div className="app">
-      <Sidebar />
-
+     
       <main className="content">
         <h1>🚗 Chi tiết xe</h1>
 

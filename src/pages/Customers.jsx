@@ -1,11 +1,9 @@
-import Sidebar from "../components/Sidebar";
 import CustomerStats from "../components/CustomerStats";
 
 function Customers() {
   return (
     <>
-      <Sidebar />
-
+      
       <main className="content">
         <div className="page-header">
           <div>

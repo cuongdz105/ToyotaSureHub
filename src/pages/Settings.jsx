@@ -1,4 +1,3 @@
-import Sidebar from "../components/Sidebar";
 
 function Settings() {
   function handleBackup() {
@@ -72,9 +71,8 @@ function handleClear() {
 
   return (
     <div className="app">
-      <Sidebar />
-
-      <main className="content">
+      
+            <main className="content">
         <h1>⚙️ Cài đặt</h1>
 
         <div className="form-container">
