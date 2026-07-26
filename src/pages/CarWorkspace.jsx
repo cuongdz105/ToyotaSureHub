@@ -14,7 +14,7 @@ import {
 import AIResultModal from "../components/AIResultModal";
 import AIMenu from "../components/AIMenu";
 import { saveHistory } from "../ai/history/historyService";
-
+import CarActionBar from "../components/CarWorkspace/CarActionBar";
 
 function CarWorkspace() {
   const { id } = useParams();
@@ -142,10 +142,7 @@ const handleThumbnailAI = async () => {
     setAiTitle("🖼 Thumbnail AI");
 
     setAiContent(result);
-    setAiTitle("Thumbnail AI");
-
-setAiContent(result);
-
+   
     setLoadingAI(false);
 
 };
@@ -170,6 +167,7 @@ const handleDownloadAI = () => {
 
   if (!car) {
     return (
+      
       <div className="app">
         
         <main className="content">
@@ -181,27 +179,18 @@ const handleDownloadAI = () => {
 
   return (
     <div className="app">
-     
+
+          
       <main className="content">
         <h1>🚗 Chi tiết xe</h1>
 
        
-        <div className="action-bar">
-  <button className="btn-back">⬅ Quay lại</button>
-
-  <button className="btn-edit">✏️ Sửa</button>
-
-  <button className="btn-delete">🗑 Xóa</button>
-
-  <button
-    className="btn-ai"
-    onClick={() => setShowMenu(true)}
->
-    🤖 Toyota AI
-</button>
-
- 
-</div>
+       <CarActionBar
+    onBack={() => {}}
+    onEdit={() => {}}
+    onDelete={() => {}}
+    onAI={() => setShowMenu(true)}
+/>
 
    <h2>
   {car.brand} {car.model} {car.version}
