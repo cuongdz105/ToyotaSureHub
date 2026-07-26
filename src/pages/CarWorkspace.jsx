@@ -15,6 +15,7 @@ import AIResultModal from "../components/AIResultModal";
 import AIMenu from "../components/AIMenu";
 import { saveHistory } from "../ai/history/historyService";
 import CarActionBar from "../components/CarWorkspace/CarActionBar";
+import CarInfo from "../components/CarWorkspace/CarInfo";
 
 function CarWorkspace() {
   const { id } = useParams();
@@ -192,23 +193,7 @@ const handleDownloadAI = () => {
     onAI={() => setShowMenu(true)}
 />
 
-   <h2>
-  {car.brand} {car.model} {car.version}
-</h2>
-
-<Gallery images={car.images} />
-
-<hr />
-
-        <hr />
-
-        <p><b>Năm:</b> {car.year}</p>
-        <p><b>Màu:</b> {car.color}</p>
-        <p><b>ODO:</b> {(Number(car.odo) * 10000).toLocaleString("vi-VN")} km</p>
-        <p><b>Giá:</b> {car.price}</p>
-        <p><b>Bảo hành:</b> {car.warranty}</p>
-        <p><b>Pháp lý:</b> {car.legal}</p>
-        <p><b>Trạng thái:</b> {car.status}</p>
+   <CarInfo car={car} />
       </main>
 
 <AIMenu
