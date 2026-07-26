@@ -21,3 +21,22 @@ export function clearCars() {
 export function exportCars() {
   return loadCars();
 }
+
+export function updateCar(id, newData) {
+  const cars = loadCars();
+
+  const updatedCars = cars.map((car) =>
+    car.id === id
+      ? {
+          ...car,
+          ...newData,
+        }
+      : car
+  );
+
+  saveCars(updatedCars);
+}
+
+export function getCar(id) {
+  return loadCars().find((car) => car.id === id);
+}

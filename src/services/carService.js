@@ -1,20 +1,12 @@
 import defaultCars from "../data/cars";
-
-import {
-  loadCars,
-  saveCars,
-} from "./storageService";
-
+import { loadCars, saveCars } from "./storageService";
 
 export function getCars() {
   const cars = loadCars();
 
-  if (cars.length > 0) {
-    return cars;
-  }
+  if (cars.length > 0) return cars;
 
   saveCars(defaultCars);
-
   return defaultCars;
 }
 
@@ -26,23 +18,38 @@ export function addCar(car) {
   const cars = getCars();
 
   cars.push({
-  ...car,
-  id: Date.now(),
-});
+    ...car,
+    id: Date.now(),
+  });
 
   saveCars(cars);
 }
 
-export function updateCar(updatedCar) {
-  const cars = getCars().map((car) =>
-    car.id === updatedCar.id ? updatedCar : car
-  );
+export function updateCar(id, updatedData) {
+  const cars = getCars();
 
-  saveCars(cars);
+  const updatedCars = cars.map((car) => {
+    if (car.id !== Number(id)) return car;
+
+    return {
+      ...car,
+      ...updatedData,
+      aiContent: {
+        ...(car.aiContent || {}),
+        ...(updatedData.aiContent || {}),
+      },
+    };
+  });
+
+  saveCars(updatedCars);
+
+  return updatedCars.find((car) => car.id === Number(id));
 }
 
 export function deleteCar(id) {
-  const cars = getCars().filter((car) => car.id !== id);
+  const cars = getCars().filter(
+    (car) => car.id !== Number(id)
+  );
 
   saveCars(cars);
 }

@@ -3,7 +3,6 @@
 // Version 1.0
 // ================================
 
-import { buildCarName } from "../utils/format";
 import { buildPrompt } from "../ai/engine/promptBuilder";
 import { runAI } from "../ai/engine/aiEngine";
 
@@ -22,38 +21,7 @@ import seoPrompt from "../ai/prompts/seo";
 // ================================
 
 
-export async function generateYoutubeContent(car) {
 
-    const prompt = buildPrompt(
-        car,
-        youtubePrompt
-    );
-
-    return await runAI(prompt);
-
-}
-
-export async function generateSeoArticle(car) {
-
-    const prompt = buildPrompt(
-        car,
-        seoPrompt
-    );
-
-    return await runAI(prompt);
-
-}
-
-export async function generateTikTokScript(car) {
-
-    const prompt = buildPrompt(
-        car,
-        tiktokPrompt
-    );
-
-    return await runAI(prompt);
-
-}
 
 export async function generateFacebookPost(car) {
 
@@ -98,6 +66,7 @@ export async function generateSEO(car) {
     return runAI(prompt, car);
 
 }
+
 
 export async function generateThumbnail(car) {
 

@@ -1,21 +1,27 @@
 import DashboardCard from "../components/DashboardCard";
+import QuickActions from "../components/QuickActions";
+import RecentActivity from "../components/RecentActivity";
+import AIWidget from "../components/AIWidget";
+
 import { getDashboardData } from "../services/dashboardService";
 
-  function Dashboard() {
-
+function Dashboard() {
   const dashboardData = getDashboardData();
-
 
   return (
     <div className="app">
-      
       <main className="content">
+
+        {/* Header */}
         <header className="topbar">
-          <h1>Dashboard</h1>
-          <p>Xin chào ông 😎</p>
+          <div>
+            <h1>👋 Chào mừng trở lại!</h1>
+            <p>Hôm nay ông muốn làm gì?</p>
+          </div>
         </header>
 
-        <div className="cards">
+        {/* KPI */}
+        <section className="cards">
           {dashboardData.map((item, index) => (
             <DashboardCard
               key={index}
@@ -24,7 +30,17 @@ import { getDashboardData } from "../services/dashboardService";
               value={item.value}
             />
           ))}
-        </div>
+        </section>
+
+        {/* Quick Actions */}
+        <QuickActions />
+
+        {/* Bottom */}
+        <section className="dashboard-bottom">
+          <RecentActivity />
+          <AIWidget />
+        </section>
+
       </main>
     </div>
   );

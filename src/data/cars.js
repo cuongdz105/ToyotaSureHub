@@ -13,6 +13,14 @@ const defaultCars = [
     status: "🟢 Đang bán",
     images: [],
     notes: "",
+
+    aiContent: {
+      facebook: "",
+      tiktok: "",
+      youtube: "",
+      seo: "",
+      thumbnail: "",
+    },
   },
 
   {
@@ -29,6 +37,14 @@ const defaultCars = [
     status: "🟢 Đang bán",
     images: [],
     notes: "",
+
+    aiContent: {
+      facebook: "",
+      tiktok: "",
+      youtube: "",
+      seo: "",
+      thumbnail: "",
+    },
   },
 
   {
@@ -45,6 +61,15 @@ const defaultCars = [
     status: "🟢 Đang bán",
     images: [],
     notes: "",
+
+    aiContent: {
+      facebook: "",
+      tiktok: "",
+      youtube: "",
+      seo: "",
+      thumbnail: "",
+    },
   },
 ];
+
 export default defaultCars;

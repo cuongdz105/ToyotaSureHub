@@ -16,11 +16,13 @@ import AIMenu from "../components/AIMenu";
 import { saveHistory } from "../ai/history/historyService";
 import CarActionBar from "../components/CarWorkspace/CarActionBar";
 import CarInfo from "../components/CarWorkspace/CarInfo";
+import { updateCar } from "../services/carService";
+import { generateAll } from "../services/aiBatchService";
 
 function CarWorkspace() {
   const { id } = useParams();
 
-  const car = getCarById(id);
+  const [car, setCar] = useState(() => getCarById(id));
 
   const [showAI, setShowAI] = useState(false);
 const [aiTitle, setAiTitle] = useState("");
@@ -28,6 +30,13 @@ const [aiContent, setAiContent] = useState("");
 const [loadingAI, setLoadingAI] = useState(false);
 const [showMenu, setShowMenu] = useState(false);
 const [regenerateAction, setRegenerateAction] = useState(null);
+const refreshCar = () => {
+    const updatedCar = getCarById(id);
+
+    if (updatedCar) {
+        setCar(updatedCar);
+    }
+};
 
 
 const handleToyotaAI = async () => {
@@ -40,6 +49,16 @@ const handleToyotaAI = async () => {
 
    
     const result = await generateFacebookPost(car);
+    updateCar(car.id, {
+  aiContent: {
+    ...(car.aiContent || {}),
+    facebook: result,
+  },
+});
+
+refreshCar();
+
+console.log("Đã update:", getCarById(car.id));
 
     setAiTitle("🤖 Toyota AI - Facebook");
 
@@ -50,6 +69,7 @@ const handleToyotaAI = async () => {
   car: `${car.brand} ${car.model} ${car.year}`,
   content: result,
 });
+
 
   } catch (error) {
 
@@ -86,6 +106,7 @@ const handleYoutubeAI = async () => {
   content: result,
 });
 
+
     setLoadingAI(false);
 
 };
@@ -107,6 +128,7 @@ const handleTikTokAI = async () => {
   car: `${car.brand} ${car.model} ${car.year}`,
   content: result,
 });
+
 
   setLoadingAI(false);
 
@@ -166,6 +188,53 @@ const handleDownloadAI = () => {
   URL.revokeObjectURL(url);
 };
 
+const openSavedAI = (type) => {
+  const ai = car.aiContent || {};
+
+  const content = ai[type];
+
+  if (!content) {
+    alert("Chưa có nội dung.");
+    return;
+  }
+
+  setAiTitle(`🤖 ${type.toUpperCase()}`);
+
+  setAiContent(content);
+
+  setLoadingAI(false);
+
+  setShowAI(true);
+};
+
+const handleGenerateAll = async () => {
+  try {
+    setLoadingAI(true);
+
+    const result = await generateAll(car);
+
+    updateCar(car.id, {
+      aiContent: result,
+    });
+
+        setAiTitle("🚀 Generate All");
+
+    setAiContent(
+      "✅ Đã tạo Facebook\n" +
+      "✅ Đã tạo TikTok\n" +
+      "✅ Đã tạo YouTube\n" +
+      "✅ Đã tạo SEO\n" +
+      "✅ Đã tạo Thumbnail"
+    );
+
+    setShowAI(true);
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setLoadingAI(false);
+  }
+};
+
   if (!car) {
     return (
       
@@ -183,7 +252,8 @@ const handleDownloadAI = () => {
 
           
       <main className="content">
-        <h1>🚗 Chi tiết xe</h1>
+       <h1>🚗 Car Workspace</h1>
+<p>Quản lý toàn bộ nội dung của chiếc xe.</p>
 
        
        <CarActionBar
@@ -193,12 +263,21 @@ const handleDownloadAI = () => {
     onAI={() => setShowMenu(true)}
 />
 
-   <CarInfo car={car} />
+   <CarInfo
+  car={car}
+  onViewAI={openSavedAI}
+/>
+   <Gallery images={car.images} />
       </main>
 
 <AIMenu
     open={showMenu}
     onClose={() => setShowMenu(false)}
+
+    onGenerateAll={() => {
+    setShowMenu(false);
+    handleGenerateAll();
+}}
 
     onFacebook={() => {
         setShowMenu(false);

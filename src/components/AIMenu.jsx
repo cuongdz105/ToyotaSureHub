@@ -6,6 +6,8 @@ function AIMenu({
 
     onClose,
 
+    onGenerateAll,
+
     onFacebook,
 
     onYoutube,
@@ -27,6 +29,11 @@ function AIMenu({
             <div className="modal">
 
                 <h2>🤖 Toyota AI</h2>
+
+                <div className="ai-card" onClick={onGenerateAll}>
+    <h3>🚀 Generate All</h3>
+    <p>Tạo toàn bộ nội dung AI cho chiếc xe.</p>
+</div>
 
                <div className="ai-card" onClick={onFacebook}>
     <h3>📱 Facebook</h3>

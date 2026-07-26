@@ -1,11 +1,21 @@
+import "./DashboardCard.css";
+
 function DashboardCard({ icon, title, value }) {
   return (
-    <div className="card">
-      <h3>
-        {icon} {title}
-      </h3>
+    <div className="dashboard-card">
+      <div className="dashboard-card-icon">
+        {icon}
+      </div>
 
-      <h2>{value}</h2>
+      <div className="dashboard-card-content">
+        <p className="dashboard-card-title">
+          {title}
+        </p>
+
+        <h2 className="dashboard-card-value">
+          {value}
+        </h2>
+      </div>
     </div>
   );
 }
