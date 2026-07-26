@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 
 import { getCarById } from "../services/carService";
 import Gallery from "../components/Gallery/Gallery";
-import "../styles/CarDetail.css";
+import "../styles/CarWorkspace.css";
 import {
     generateFacebookPost,
     generateYoutube,
@@ -16,7 +16,7 @@ import AIMenu from "../components/AIMenu";
 import { saveHistory } from "../ai/history/historyService";
 
 
-function CarDetail() {
+function CarWorkspace() {
   const { id } = useParams();
 
   const car = getCarById(id);
@@ -270,4 +270,4 @@ onThumbnail={() => {
   );
 }
 
-export default CarDetail;
+export default CarWorkspace;

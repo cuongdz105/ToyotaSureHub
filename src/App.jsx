@@ -5,7 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import CarList from "./pages/CarList";
 import AddCar from "./pages/AddCar";
 import EditCar from "./pages/EditCar";
-import CarDetail from "./pages/CarDetail";
+import CarWorkspace from "./pages/CarWorkspace";
 import Settings from "./pages/Settings";
 import Customers from "./pages/Customers";
 import AIHistory from "./pages/AIHistory";
@@ -21,7 +21,7 @@ function App() {
     <Route path="/cars/new" element={<AddCar />} />
     <Route path="/edit/:id" element={<EditCar />} />
     <Route path="/customers" element={<Customers />} />
-    <Route path="/cars/:id" element={<CarDetail />} />
+    <Route path="/cars/:id" element={<CarWorkspace />} />
     <Route path="/settings" element={<Settings />} />
     <Route path="/ai-history" element={<AIHistory />} />
     <Route path="/ai-workspace" element={<AIWorkspace />} />
