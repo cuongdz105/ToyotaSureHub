@@ -96,6 +96,15 @@ const handleYoutubeAI = async () => {
 
     const result = await generateYoutube(car);
 
+    updateCar(car.id, {
+    aiContent: {
+        ...(car.aiContent || {}),
+        youtube: result,
+    },
+});
+
+refreshCar();
+
     setAiTitle("YouTube AI");
 
     setAiContent(result);
@@ -119,6 +128,15 @@ const handleTikTokAI = async () => {
 
   const result = await generateTikTok(car);
 
+  updateCar(car.id, {
+    aiContent: {
+        ...(car.aiContent || {}),
+        tiktok: result,
+    },
+});
+
+refreshCar();
+
   setAiTitle("🎬 TikTok AI");
 
   setAiContent(result);
@@ -141,6 +159,15 @@ const handleSEOAI = async () => {
 
     const result = await generateSEO(car);
 
+    updateCar(car.id, {
+    aiContent: {
+        ...(car.aiContent || {}),
+        seo: result,
+    },
+});
+
+refreshCar();
+
     setAiTitle("📰 SEO AI");
 
     setAiContent(result);
@@ -162,9 +189,26 @@ const handleThumbnailAI = async () => {
 
     const result = await generateThumbnail(car);
 
+   
+    updateCar(car.id, {
+    aiContent: {
+        ...(car.aiContent || {}),
+        thumbnail: result,
+    },
+});
+
+refreshCar();
+
     setAiTitle("🖼 Thumbnail AI");
 
     setAiContent(result);
+
+    saveHistory({
+    type: "Thumbnail",
+    title: "🖼 Thumbnail AI",
+    car: `${car.brand} ${car.model} ${car.year}`,
+    content: result,
+});
    
     setLoadingAI(false);
 
