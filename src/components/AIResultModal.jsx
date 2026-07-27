@@ -1,15 +1,18 @@
 import "./AIResultModal.css";
 
 function AIResultModal({
-  open,
-  title,
-  content,
-  loading,
-  onClose,
-  onCopy,
-  onRegenerate,
-  onDownload,
-}) {
+    open,
+    title,
+    content,
+    loading,
+    onClose,
+    onCopy,
+    onCopyAll,
+    onDownload,
+    onRegenerate,
+})
+
+{
   if (!open) return null;
 
   return (
@@ -47,6 +50,10 @@ function AIResultModal({
     <button onClick={onCopy}>
       📋 Copy
     </button>
+
+     <button onClick={onCopyAll}>
+    📚 Copy All
+</button>
 
     <button onClick={onDownload}>
       💾 Download

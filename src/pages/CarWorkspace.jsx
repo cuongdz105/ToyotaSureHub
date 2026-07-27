@@ -52,7 +52,7 @@ const handleToyotaAI = async () => {
     updateCar(car.id, {
   aiContent: {
     ...(car.aiContent || {}),
-    facebook: result,
+    ...result,
   },
 });
 
@@ -214,7 +214,42 @@ refreshCar();
 
 };
 
+const handleCopyAll = () => {
+    const ai = car.aiContent || {};
+
+    const content =
+`📘 FACEBOOK
+${ai.facebook || "Chưa có"}
+
+==============================
+
+🎬 TIKTOK
+${ai.tiktok || "Chưa có"}
+
+==============================
+
+▶️ YOUTUBE
+${ai.youtube || "Chưa có"}
+
+==============================
+
+📰 SEO
+${ai.seo || "Chưa có"}
+
+==============================
+
+🖼 THUMBNAIL
+${ai.thumbnail || "Chưa có"}
+`;
+
+    navigator.clipboard.writeText(content);
+
+    alert("✅ Đã copy toàn bộ AI!");
+};
+
 const handleDownloadAI = () => {
+
+  
   const blob = new Blob([aiContent], {
     type: "text/plain;charset=utf-8",
   });
@@ -359,6 +394,7 @@ onThumbnail={() => {
         navigator.clipboard.writeText(aiContent);
         alert("✅ Đã copy nội dung!");
     }}
+    onCopyAll={handleCopyAll}
     onDownload={handleDownloadAI}
     onRegenerate={regenerateAction}
 />
