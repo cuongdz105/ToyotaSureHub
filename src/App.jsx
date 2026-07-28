@@ -11,6 +11,7 @@ import Customers from "./pages/Customers";
 import AIHistory from "./pages/AIHistory";
 import MainLayout from "./layouts/MainLayout";
 import AIWorkspace from "./pages/AIWorkspace";
+import CampaignPage from "./pages/CampaignPage";
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
     <Route path="/settings" element={<Settings />} />
     <Route path="/ai-history" element={<AIHistory />} />
     <Route path="/ai-workspace" element={<AIWorkspace />} />
+    <Route path="/campaign" element={<CampaignPage />} />
   </Route>
 </Routes>
   );

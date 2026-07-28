@@ -18,6 +18,7 @@ import CarActionBar from "../components/CarWorkspace/CarActionBar";
 import CarInfo from "../components/CarWorkspace/CarInfo";
 import { updateCar } from "../services/carService";
 import { generateAll } from "../services/aiBatchService";
+import CampaignEngine from "../engine/CampaignEngine";
 
 function CarWorkspace() {
   const { id } = useParams();
@@ -356,6 +357,8 @@ const handleGenerateAll = async () => {
     onGenerateAll={() => {
     setShowMenu(false);
     handleGenerateAll();
+
+    
 }}
 
     onFacebook={() => {
@@ -383,6 +386,16 @@ onThumbnail={() => {
     handleThumbnailAI();
 }}
 />
+
+<button
+    onClick={() => {
+        const campaign = CampaignEngine.start(car.id);
+        console.log(campaign);
+        alert("Campaign Started!");
+    }}
+>
+    🚀 Start Campaign
+</button>
 
 <AIResultModal
     open={showAI}

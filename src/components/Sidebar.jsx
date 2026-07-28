@@ -21,6 +21,10 @@ function Sidebar() {
     <button>🤖 Toyota AI</button>
 </Link>
 
+<Link to="/campaign">
+  <button>📣 Facebook Campaign</button>
+</Link>
+
       <button>📊 Báo cáo</button>
 
       <Link to="/settings">
