@@ -5,6 +5,9 @@ function CarActionBar({
   onEdit,
   onDelete,
   onAI,
+  onFacebook,
+  onTikTok,
+  onYoutube,
 }) {
   return (
     <div className="action-bar">
@@ -22,6 +25,18 @@ function CarActionBar({
 
       <button className="btn-ai" onClick={onAI}>
         🤖 Toyota AI
+      </button>
+
+      <button className="btn-facebook" onClick={onFacebook}>
+        📣 Facebook
+      </button>
+
+      <button className="btn-tiktok" onClick={onTikTok}>
+        🎬 TikTok
+      </button>
+
+      <button className="btn-youtube" onClick={onYoutube}>
+        ▶️ YouTube
       </button>
     </div>
   );

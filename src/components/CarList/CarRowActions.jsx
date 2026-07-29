@@ -5,6 +5,19 @@ function CarRowActions({
   navigate,
   onDelete,
 }) {
+
+  const handleFacebook = () => {
+    console.log("Facebook Campaign", car);
+  };
+
+  const handleTikTok = () => {
+    console.log("TikTok Campaign", car);
+  };
+
+  const handleAI = () => {
+    console.log("AI", car);
+  };
+
   return (
     <>
       <Button
@@ -18,6 +31,24 @@ function CarRowActions({
         onClick={() => navigate(`/edit/${car.id}`)}
       >
         ✏️
+      </Button>
+
+      <Button
+        onClick={handleAI}
+      >
+        🤖
+      </Button>
+
+      <Button
+        onClick={handleFacebook}
+      >
+        📣
+      </Button>
+
+      <Button
+        onClick={handleTikTok}
+      >
+        🎬
       </Button>
 
       <Button

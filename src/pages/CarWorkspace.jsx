@@ -19,6 +19,9 @@ import CarInfo from "../components/CarWorkspace/CarInfo";
 import { updateCar } from "../services/carService";
 import { generateAll } from "../services/aiBatchService";
 import CampaignEngine from "../engine/CampaignEngine";
+import MarketingCenter from "../components/CarWorkspace/MarketingCenter";
+import WorkspaceCard from "../components/CarWorkspace/Card/WorkspaceCard";
+import AICenter from "../components/CarWorkspace/AICenter";
 
 function CarWorkspace() {
   const { id } = useParams();
@@ -341,13 +344,42 @@ const handleGenerateAll = async () => {
     onEdit={() => {}}
     onDelete={() => {}}
     onAI={() => setShowMenu(true)}
+
+    onFacebook={() => {
+        console.log("Facebook", car);
+    }}
+
+    onTikTok={() => {
+        console.log("TikTok", car);
+    }}
+
+    onYoutube={() => {
+        console.log("YouTube", car);
+    }}
 />
 
-   <CarInfo
-  car={car}
-  onViewAI={openSavedAI}
-/>
-   <Gallery images={car.images} />
+   <WorkspaceCard title="📦 Thông tin xe">
+
+    <CarInfo
+        car={car}
+        onViewAI={openSavedAI}
+    />
+
+</WorkspaceCard>
+   <WorkspaceCard title="📸 Hình ảnh">
+    <Gallery images={car.images} />
+</WorkspaceCard>
+
+<WorkspaceCard title="🤖 AI Center">
+    <AICenter
+        car={car}
+        onViewAI={openSavedAI}
+    />
+</WorkspaceCard>
+
+<WorkspaceCard title="📣 Marketing">
+    <MarketingCenter />
+</WorkspaceCard>
       </main>
 
 <AIMenu
@@ -387,15 +419,6 @@ onThumbnail={() => {
 }}
 />
 
-<button
-    onClick={() => {
-        const campaign = CampaignEngine.start(car.id);
-        console.log(campaign);
-        alert("Campaign Started!");
-    }}
->
-    🚀 Start Campaign
-</button>
 
 <AIResultModal
     open={showAI}
