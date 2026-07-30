@@ -1,56 +1,75 @@
 import "./MarketingCenter.css";
 import CampaignEngine from "../../engine/CampaignEngine";
+import PlatformCard from "./PlatformCard";
 
 function MarketingCenter({ car }) {
 
+    const ai = car.aiContent || {};
+
     const createCampaign = (platform) => {
 
-    const campaign = CampaignEngine.start({
-        carId: car.id,
-        platform,
-    });
+        const campaign = CampaignEngine.start({
+            carId: car.id,
+            platform,
+        });
 
-    console.log(campaign);
+        console.log(campaign);
 
-    alert(`Đã tạo ${platform} Campaign`);
-};
+        alert(`Đã tạo ${platform} Campaign`);
+    };
+
+    const platforms = [
+        {
+            key: "facebook",
+            icon: "📘",
+            title: "Facebook",
+            generated: !!ai.facebook,
+        },
+        {
+            key: "tiktok",
+            icon: "🎬",
+            title: "TikTok",
+            generated: !!ai.tiktok,
+        },
+        {
+            key: "youtube",
+            icon: "▶️",
+            title: "YouTube",
+            generated: !!ai.youtube,
+        },
+        {
+            key: "seo",
+            icon: "📰",
+            title: "SEO",
+            generated: !!ai.seo,
+        },
+    ];
 
     return (
         <div className="marketing-center">
 
-            <h2>📣 Marketing Center</h2>
-
+            
             <div className="marketing-grid">
 
-                <div className="marketing-card">
-                    <h3>📘 Facebook</h3>
+                {platforms.map((platform) => (
 
-                    <p>Campaign: Chưa tạo</p>
+                    <PlatformCard
+                        key={platform.key}
+                        icon={platform.icon}
+                        title={platform.title}
+                        generated={platform.generated}
+                        published={false}
 
-                   <button onClick={() => createCampaign("facebook")}>
-    Tạo Campaign
-</button>
-                </div>
+                        onView={() =>
+                            alert(`Xem ${platform.title}`)
+                        }
 
-                <div className="marketing-card">
-                    <h3>🎬 TikTok</h3>
+                        onPublish={() =>
+                            createCampaign(platform.key)
+                        }
+                    />
 
-                    <p>Campaign: Chưa tạo</p>
-
-                    <button onClick={() => createCampaign("tiktok")}>
-    Tạo Campaign
-</button>
-                </div>
-
-                <div className="marketing-card">
-                    <h3>▶️ YouTube</h3>
-
-                    <p>Campaign: Chưa tạo</p>
-
-                   <button onClick={() => createCampaign("youtube")}>
-    Tạo Campaign
-</button>
-                </div>
+                ))}
 
             </div>
 

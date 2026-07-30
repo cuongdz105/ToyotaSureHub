@@ -378,7 +378,9 @@ const handleGenerateAll = async () => {
 </WorkspaceCard>
 
 <WorkspaceCard title="📣 Marketing">
-    <MarketingCenter />
+    
+    <MarketingCenter car={car} />
+
 </WorkspaceCard>
       </main>
 
