@@ -10,6 +10,7 @@ import facebookPrompt from "../ai/prompts/facebook";
 import youtubePrompt from "../ai/prompts/youtube";
 import tiktokPrompt from "../ai/prompts/tiktok";
 import seoPrompt from "../ai/prompts/seo";
+import thumbnailPrompt from "../ai/prompts/thumbnail";
 
 // ================================
 // Prompt Builder V2.0
@@ -37,9 +38,9 @@ export async function generateFacebookPost(car) {
 export async function generateYoutube(car) {
 
     const prompt = buildPrompt(
-        car,
-        "Viết tiêu đề Youtube, mô tả Youtube và hashtag."
-    );
+    car,
+    youtubePrompt
+);
 
     return runAI(prompt, car);
 
@@ -47,11 +48,10 @@ export async function generateYoutube(car) {
 
 export async function generateTikTok(car) {
 
-    const prompt = buildPrompt(
-        car,
-        "Viết kịch bản TikTok khoảng 60 giây."
-    );
-
+   const prompt = buildPrompt(
+    car,
+    tiktokPrompt
+);
     return runAI(prompt, car);
 
 }
@@ -59,9 +59,9 @@ export async function generateTikTok(car) {
 export async function generateSEO(car) {
 
     const prompt = buildPrompt(
-        car,
-        "Viết bài chuẩn SEO khoảng 800 từ."
-    );
+    car,
+    seoPrompt
+);
 
     return runAI(prompt, car);
 
@@ -70,10 +70,10 @@ export async function generateSEO(car) {
 
 export async function generateThumbnail(car) {
 
-    const prompt = buildPrompt(
-        car,
-        "Viết 10 tiêu đề Thumbnail Youtube thật thu hút."
-    );
+   const prompt = buildPrompt(
+    car,
+    thumbnailPrompt
+);
 
     return runAI(prompt, car);
 

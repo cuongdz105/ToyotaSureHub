@@ -43,54 +43,6 @@ const refreshCar = () => {
 };
 
 
-const handleToyotaAI = async () => {
-
-      try {
-
-    setLoadingAI(true);
-    setShowAI(true);
-    setRegenerateAction(() => handleToyotaAI);
-
-   
-    const result = await generateFacebookPost(car);
-    updateCar(car.id, {
-  aiContent: {
-    ...(car.aiContent || {}),
-    ...result,
-  },
-});
-
-refreshCar();
-
-console.log("Đã update:", getCarById(car.id));
-
-    setAiTitle("🤖 Toyota AI - Facebook");
-
-    setAiContent(result);
-   saveHistory({
-  type: "Facebook",
-  title: "🤖 Toyota AI - Facebook",
-  car: `${car.brand} ${car.model} ${car.year}`,
-  content: result,
-});
-
-
-  } catch (error) {
-
-    setAiTitle("Lỗi");
-
-    setAiContent("Không thể tạo nội dung AI.");
-
-    console.error(error);
-
-  } finally {
-
-    setLoadingAI(false);
-
-  }
-
-};
-
 
 const handleYoutubeAI = async () => {
 
@@ -108,6 +60,54 @@ const handleYoutubeAI = async () => {
 });
 
 refreshCar();
+
+const handleToyotaAI = async () => {
+
+  try {
+
+    setLoadingAI(true);
+    setShowAI(true);
+    setRegenerateAction(() => handleToyotaAI);
+
+    const result = await generateFacebookPost(car);
+
+    updateCar(car.id, {
+      aiContent: {
+        ...(car.aiContent || {}),
+        ...result,
+      },
+    });
+
+    refreshCar();
+
+    console.log("Đã update:", getCarById(car.id));
+
+    setAiTitle("🤖 Toyota AI - Facebook");
+
+    setAiContent(result);
+
+    saveHistory({
+      type: "Facebook",
+      title: "🤖 Toyota AI - Facebook",
+      car: `${car.brand} ${car.model} ${car.year}`,
+      content: result,
+    });
+
+  } catch (error) {
+
+    setAiTitle("Lỗi");
+
+    setAiContent("Không thể tạo nội dung AI.");
+
+    console.error(error);
+
+  } finally {
+
+    setLoadingAI(false);
+
+  }
+
+};
 
     setAiTitle("YouTube AI");
 

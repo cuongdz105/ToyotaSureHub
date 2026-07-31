@@ -1,15 +1,12 @@
 const thumbnailPrompt = `
-Hãy đề xuất:
+Viết 10 tiêu đề Thumbnail YouTube thật ngắn, gây tò mò, tăng CTR.
 
-- Tiêu đề Thumbnail
+Yêu cầu:
 
-Không quá 8 từ.
-
-Gây tò mò.
-
-Thu hút người xem.
-
-Dễ đọc trên điện thoại.
+- Dưới 8 từ
+- Chỉ viết tiêu đề
+- Không đánh số
+- Không emoji
 `;
 
 export default thumbnailPrompt;
