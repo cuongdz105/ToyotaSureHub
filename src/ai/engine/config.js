@@ -1,1 +1,1 @@
-export const AI_PROVIDER = "mock";
+export const AI_PROVIDER = "openai";

@@ -13,11 +13,17 @@ import { buildCarName } from "../../utils/format";
 // Build Prompt
 // =======================================
 
-export function buildPrompt(car, template) {
+export function buildPrompt(car, template, knowledge = "") {
 
     return `
 
 ${template}
+
+============================
+
+KIẾN THỨC BỔ SUNG
+
+${knowledge}
 
 ============================
 

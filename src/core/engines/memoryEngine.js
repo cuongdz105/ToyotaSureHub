@@ -1,7 +1,17 @@
-import rules from "../memory/rules.json";
+// =======================================
+// Toyota Memory Engine
+// =======================================
 
-export function getMemories(type) {
+const memories = [];
 
-    return rules.filter(rule => rule.type === type);
+export function addMemory(memory) {
+    memories.push(memory);
+}
 
+export function getMemories() {
+    return memories;
+}
+
+export function clearMemories() {
+    memories.length = 0;
 }

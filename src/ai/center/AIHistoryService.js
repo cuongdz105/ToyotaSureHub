@@ -6,15 +6,11 @@ export function loadHistory() {
     );
 }
 
-export function saveHistory(item) {
+export function saveHistory(context) {
 
     const history = loadHistory();
 
-    history.unshift({
-        id: Date.now(),
-        createdAt: new Date().toISOString(),
-        ...item
-    });
+    history.unshift(context);
 
     localStorage.setItem(
         STORAGE_KEY,

@@ -20,20 +20,10 @@ export async function generate(prompt) {
     );
 
     if (!response.ok) {
-        throw new Error(await response.text());
+        throw new Error("OpenAI API Error");
     }
 
     const data = await response.json();
 
-    console.log("OPENAI RESPONSE:", data);
-    console.log("OUTPUT TEXT:", data.output_text);
-
-    return (
-        data.output_text ||
-        data.output
-            ?.flatMap(item => item.content || [])
-            ?.find(c => c.type === "output_text")
-            ?.text ||
-        ""
-    );
+    return data.output_text;
 }
