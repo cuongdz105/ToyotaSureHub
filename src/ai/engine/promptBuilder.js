@@ -10,12 +10,6 @@ export function buildPrompt(car, template, knowledge = "") {
 ${dna}
 
 ==================================================
-NHIỆM VỤ
-==================================================
-
-${template}
-
-==================================================
 KIẾN THỨC BỔ SUNG
 ==================================================
 
@@ -52,12 +46,37 @@ Ghi chú:
 ${car.notes || "Không có"}
 
 ==================================================
-YÊU CẦU
+YÊU CẦU CUỐI
 ==================================================
 
-- Chỉ trả về đúng nội dung cần tạo.
+Viết như một người bán xe thật.
+
+Đừng giống AI.
+
+Đừng giống quảng cáo.
+
+Đừng cố viết hay.
+
+Nếu bài dài, hãy tự rút ngắn.
+
+Nếu câu quá hoàn chỉnh, hãy viết tự nhiên hơn.
+
+Nếu có thể kể chuyện thay vì liệt kê, hãy kể.
+
+Mục tiêu là khiến người đọc muốn nhắn tin.
+
+==================================================
+NHIỆM VỤ
+==================================================
+
+${template}
+
+==================================================
+QUY TẮC TRẢ KẾT QUẢ
+==================================================
+
+- Chỉ trả về đúng nội dung.
 - Không giải thích.
-- Không mô tả cách làm.
 - Không dùng markdown.
 - Không nói bạn là AI.
 `;

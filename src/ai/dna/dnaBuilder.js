@@ -1,7 +1,9 @@
 import company from "./company";
-import human from "./human";
+import humans from "./humans";
 import forbidden from "./forbidden";
 import facebook from "./facebook";
+import humanLanguage from "./humanLanguage";
+
 
 export function buildDNA(type) {
 
@@ -14,10 +16,12 @@ export function buildDNA(type) {
     return `
 ${company}
 
-${human}
+${humans}
 
 ${forbidden}
 
 ${channel}
+
+${humanLanguage}
 `;
 }

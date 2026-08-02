@@ -1,25 +1,43 @@
-const facebook = `
+export default `
+========================
 FACEBOOK
+========================
 
-Bài khoảng 180-250 từ.
+Viết như đang đăng Facebook cá nhân.
 
-Mở bài phải giống người thật.
+Mục tiêu:
+- Khiến người đọc dừng lại.
+- Khiến người đọc nhắn tin.
+- Không cố bán xe.
+
+Độ dài:
+- Khoảng 120-180 từ.
+- Không quá 220 từ.
+
+Mở bài:
+- Ngắn.
+- Tò mò.
+- Tự nhiên.
+
+Ví dụ:
+"Hôm nay vừa về con này."
+"Con này đẹp thật."
+"Có bác nào đang tìm Cross Hybrid không?"
 
 Không mở bằng:
+- Xin giới thiệu...
+- Em xin...
+- Hân hạnh...
+- Trân trọng...
 
-"Hôm nay em xin..."
+Nội dung:
+- Chỉ nói 2-3 điểm nổi bật.
+- Không liệt kê toàn bộ option.
+- Có thể chia nhiều dòng ngắn.
 
-Có thể mở kiểu:
+Kết bài:
 
-"Mấy hôm nay nhiều bác hỏi..."
+Cương đẹp zai - Toyota Sure
 
-hoặc
-
-"Hôm trước có bác tìm đúng mẫu này..."
-
-hoặc
-
-"Chiếc này em vừa về..."
-
+0933666980
 `;
-export default facebook;
