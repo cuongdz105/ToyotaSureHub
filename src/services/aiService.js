@@ -14,6 +14,7 @@ import thumbnailPrompt from "../ai/prompts/thumbnail";
 
 import { buildContext } from "../core/engines/contentEngine";
 import { saveHistory } from "./historyService";
+import { addMemory } from "../ai/memory/memoryEngine";
 
 // =======================================
 // Facebook
@@ -39,6 +40,12 @@ export async function generateFacebookPost(car) {
         prompt,
         result,
     });
+
+    addMemory({
+    type: "facebook",
+    car: `${car.brand} ${car.model}`,
+    summary: result.substring(0, 200)
+});
 
     return result;
 }
@@ -67,7 +74,12 @@ export async function generateYoutube(car) {
         prompt,
         result,
     });
-
+    
+    addMemory({
+    type: "youtube",
+    car: `${car.brand} ${car.model}`,
+    summary: result.substring(0, 200)
+});
     return result;
 }
 
@@ -95,6 +107,12 @@ export async function generateTikTok(car) {
         prompt,
         result,
     });
+
+    addMemory({
+    type: "tiktok",
+    car: `${car.brand} ${car.model}`,
+    summary: result.substring(0, 200)
+});
 
     return result;
 }
@@ -124,6 +142,12 @@ export async function generateSEO(car) {
         result,
     });
 
+addMemory({
+    type: "seo",
+    car: `${car.brand} ${car.model}`,
+    summary: result.substring(0, 200)
+});
+
     return result;
 }
 
@@ -151,6 +175,12 @@ export async function generateThumbnail(car) {
         prompt,
         result,
     });
+
+    addMemory({
+    type: "thumbnail",
+    car: `${car.brand} ${car.model}`,
+    summary: result.substring(0, 200)
+});
 
     return result;
 }

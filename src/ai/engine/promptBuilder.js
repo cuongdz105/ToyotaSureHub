@@ -1,33 +1,31 @@
-// =======================================
-// Toyota AI Prompt Builder V3.0
-// =======================================
-
-import { COMPANY } from "../knowledge/company";
-import { SALES_STYLE } from "../knowledge/sales";
-import { MARKETING } from "../knowledge/marketing";
-import { INSPECTION } from "../knowledge/inspection";
-
 import { buildCarName } from "../../utils/format";
-
-// =======================================
-// Build Prompt
-// =======================================
+import { buildDNA } from "../dna/dnaBuilder";
+import { buildMemoryPrompt } from "../memory/memoryBuilder";
 
 export function buildPrompt(car, template, knowledge = "") {
+  const dna = buildDNA("facebook");
+  const memory = buildMemoryPrompt();
 
-    return `
+  return `
+${dna}
+
+==================================================
+NHIỆM VỤ
+==================================================
 
 ${template}
 
-============================
-
+==================================================
 KIẾN THỨC BỔ SUNG
+==================================================
 
 ${knowledge}
 
-============================
+${memory}
 
+==================================================
 THÔNG TIN XE
+==================================================
 
 Tên xe:
 ${buildCarName(car)}
@@ -50,53 +48,17 @@ ${car.warranty}
 Pháp lý:
 ${car.legal}
 
-============================
+Ghi chú:
+${car.notes || "Không có"}
 
-THÔNG TIN SHOWROOM
+==================================================
+YÊU CẦU
+==================================================
 
-Tên:
-${COMPANY.name}
-
-Khẩu hiệu:
-${COMPANY.slogan}
-
-Tiêu chuẩn:
-${COMPANY.inspection}
-
-============================
-
-CAM KẾT
-
-${INSPECTION.commitments.join("\n")}
-
-============================
-
-VĂN PHONG
-
-Người bán xưng:
-${SALES_STYLE.seller}
-
-Khách hàng gọi:
-${SALES_STYLE.customer}
-
-Giọng văn:
-${SALES_STYLE.tone}
-
-============================
-
-QUY TẮC MARKETING
-
-Facebook:
-${MARKETING.facebook.minWords}-${MARKETING.facebook.maxWords} từ
-
-============================
-
-Viết tự nhiên.
-
-Không bịa thông tin.
-
-Kết thúc bằng lời kêu gọi liên hệ.
-
+- Chỉ trả về đúng nội dung cần tạo.
+- Không giải thích.
+- Không mô tả cách làm.
+- Không dùng markdown.
+- Không nói bạn là AI.
 `;
-
 }

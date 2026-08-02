@@ -26,8 +26,7 @@ export async function generate(prompt) {
     const data = await response.json();
 
     console.log("OPENAI RESPONSE:", data);
-    console.log("OUTPUT TEXT:", data.output_text);
-
+    
     return (
         data.output_text ||
         data.output
