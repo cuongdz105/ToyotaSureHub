@@ -1,10 +1,12 @@
 import { buildCarName } from "../../utils/format";
 import { buildDNA } from "../dna/dnaBuilder";
 import { buildMemoryPrompt } from "../memory/memoryBuilder";
+import { loadKnowledge } from "../knowledgeLoader";
 
-export function buildPrompt(car, template, knowledge = "") {
+export function buildPrompt(car, template) {
   const dna = buildDNA("facebook");
   const memory = buildMemoryPrompt();
+  const knowledge = loadKnowledge(car, "facebook");
 
   return `
 ${dna}
