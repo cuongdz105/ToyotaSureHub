@@ -1,6 +1,6 @@
 // ================================
 // Toyota AI Service
-// Version 1.1
+// Version 2.0
 // ================================
 
 import { buildPrompt } from "../ai/engine/promptBuilder";
@@ -12,28 +12,17 @@ import tiktokPrompt from "../ai/prompts/tiktok";
 import seoPrompt from "../ai/prompts/seo";
 import thumbnailPrompt from "../ai/prompts/thumbnail";
 
-import { buildContext } from "../core/engines/contentEngine";
 import { saveHistory } from "./historyService";
 import { addMemory } from "../ai/memory/memoryEngine";
 
-// =======================================
-// Facebook
-// =======================================
+async function generateContent(car, type, template) {
 
-export async function generateFacebookPost(car) {
-
-    const context = buildContext();
-
-    const prompt = buildPrompt(
-        car,
-        facebookPrompt,
-        context.knowledge
-    );
+    const prompt = buildPrompt(car, template);
 
     const result = await runAI(prompt, car);
 
     saveHistory({
-        type: "facebook",
+        type,
         model: "gpt-5.5",
         carId: car.id,
         carName: `${car.brand} ${car.model} ${car.year}`,
@@ -41,13 +30,27 @@ export async function generateFacebookPost(car) {
         result,
     });
 
-    addMemory({
-    type: "facebook",
-    car: `${car.brand} ${car.model}`,
-    summary: result.substring(0, 200)
-});
+    console.log("AI Result:", result);
 
+addMemory({
+    type,
+    car: `${car.brand} ${car.model}`,
+    summary: result?.substring(0, 200) || "",
+});
+   
     return result;
+}
+
+// =======================================
+// Facebook
+// =======================================
+
+export async function generateFacebookPost(car) {
+    return generateContent(
+        car,
+        "facebook",
+        facebookPrompt
+    );
 }
 
 // =======================================
@@ -55,32 +58,11 @@ export async function generateFacebookPost(car) {
 // =======================================
 
 export async function generateYoutube(car) {
-
-    const context = buildContext();
-
-    const prompt = buildPrompt(
+    return generateContent(
         car,
-        youtubePrompt,
-        context.knowledge
+        "youtube",
+        youtubePrompt
     );
-
-    const result = await runAI(prompt, car);
-
-    saveHistory({
-        type: "youtube",
-        model: "gpt-5.5",
-        carId: car.id,
-        carName: `${car.brand} ${car.model} ${car.year}`,
-        prompt,
-        result,
-    });
-    
-    addMemory({
-    type: "youtube",
-    car: `${car.brand} ${car.model}`,
-    summary: result.substring(0, 200)
-});
-    return result;
 }
 
 // =======================================
@@ -88,33 +70,11 @@ export async function generateYoutube(car) {
 // =======================================
 
 export async function generateTikTok(car) {
-
-    const context = buildContext();
-
-    const prompt = buildPrompt(
+    return generateContent(
         car,
-        tiktokPrompt,
-        context.knowledge
+        "tiktok",
+        tiktokPrompt
     );
-
-    const result = await runAI(prompt, car);
-
-    saveHistory({
-        type: "tiktok",
-        model: "gpt-5.5",
-        carId: car.id,
-        carName: `${car.brand} ${car.model} ${car.year}`,
-        prompt,
-        result,
-    });
-
-    addMemory({
-    type: "tiktok",
-    car: `${car.brand} ${car.model}`,
-    summary: result.substring(0, 200)
-});
-
-    return result;
 }
 
 // =======================================
@@ -122,33 +82,11 @@ export async function generateTikTok(car) {
 // =======================================
 
 export async function generateSEO(car) {
-
-    const context = buildContext();
-
-    const prompt = buildPrompt(
+    return generateContent(
         car,
-        seoPrompt,
-        context.knowledge
+        "seo",
+        seoPrompt
     );
-
-    const result = await runAI(prompt, car);
-
-    saveHistory({
-        type: "seo",
-        model: "gpt-5.5",
-        carId: car.id,
-        carName: `${car.brand} ${car.model} ${car.year}`,
-        prompt,
-        result,
-    });
-
-addMemory({
-    type: "seo",
-    car: `${car.brand} ${car.model}`,
-    summary: result.substring(0, 200)
-});
-
-    return result;
 }
 
 // =======================================
@@ -156,31 +94,9 @@ addMemory({
 // =======================================
 
 export async function generateThumbnail(car) {
-
-    const context = buildContext();
-
-    const prompt = buildPrompt(
+    return generateContent(
         car,
-        thumbnailPrompt,
-        context.knowledge
+        "thumbnail",
+        thumbnailPrompt
     );
-
-    const result = await runAI(prompt, car);
-
-    saveHistory({
-        type: "thumbnail",
-        model: "gpt-5.5",
-        carId: car.id,
-        carName: `${car.brand} ${car.model} ${car.year}`,
-        prompt,
-        result,
-    });
-
-    addMemory({
-    type: "thumbnail",
-    car: `${car.brand} ${car.model}`,
-    summary: result.substring(0, 200)
-});
-
-    return result;
 }

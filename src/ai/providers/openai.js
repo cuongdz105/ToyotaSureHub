@@ -2,8 +2,9 @@
 // OpenAI Provider
 // =======================================
 
-export async function generate(prompt) {
+const MODEL = "gpt-5.5";
 
+export async function generate(prompt) {
     const response = await fetch(
         "https://api.openai.com/v1/responses",
         {
@@ -13,17 +14,31 @@ export async function generate(prompt) {
                 Authorization: `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
             },
             body: JSON.stringify({
-                model: "gpt-5.5",
+                model: MODEL,
                 input: prompt,
             }),
         }
     );
 
     if (!response.ok) {
-        throw new Error("OpenAI API Error");
+        const error = await response.text();
+        throw new Error(error);
     }
 
     const data = await response.json();
 
-    return data.output_text;
+    console.log("OpenAI Response:", data);
+
+    if (data.output_text) {
+        return data.output_text;
+    }
+
+    if (data.output?.length) {
+        return data.output
+            .flatMap(item => item.content || [])
+            .map(item => item.text || "")
+            .join("");
+    }
+
+    return "";
 }
