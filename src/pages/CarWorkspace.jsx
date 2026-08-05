@@ -335,9 +335,13 @@ ${ai.thumbnail || "Chưa có"}
 
         <WorkspaceCard title="🤖 AI Center">
           <AICenter
-            car={car}
-            onViewAI={openSavedAI}
-          />
+    car={car}
+    onViewAI={openSavedAI}
+    onGenerateAll={handleGenerateAll}
+    onSalesChat={() => {
+        alert("🚧 AI Sales Assistant đang phát triển...");
+    }}
+/>
         </WorkspaceCard>
 
         <WorkspaceCard title="📣 Marketing">

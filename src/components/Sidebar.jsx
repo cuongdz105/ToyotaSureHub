@@ -14,16 +14,28 @@ function Sidebar() {
       </Link>
 
       <Link to="/customers">
-  <button>👥 Khách hàng</button>
-</Link>
+        <button>👥 Khách hàng</button>
+      </Link>
+
+      {/* ==============================
+          FACEBOOK MARKETING CENTER
+      ============================== */}
+
+      <Link to="/facebook/accounts">
+        <button>👤 Facebook Accounts</button>
+      </Link>
+
+      <Link to="/campaign">
+        <button>📣 Facebook Campaign</button>
+      </Link>
+
+      {/* ==============================
+          AI
+      ============================== */}
 
       <Link to="/ai-workspace">
-    <button>🤖 Toyota AI</button>
-</Link>
-
-<Link to="/campaign">
-  <button>📣 Facebook Campaign</button>
-</Link>
+        <button>🤖 Toyota AI</button>
+      </Link>
 
       <button>📊 Báo cáo</button>
 

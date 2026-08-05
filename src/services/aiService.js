@@ -11,6 +11,7 @@ import youtubePrompt from "../ai/prompts/youtube";
 import tiktokPrompt from "../ai/prompts/tiktok";
 import seoPrompt from "../ai/prompts/seo";
 import thumbnailPrompt from "../ai/prompts/thumbnail";
+import salesChatPrompt from "../ai/prompts/salesChat";
 
 import { saveHistory } from "./historyService";
 import { addMemory } from "../ai/memory/memoryEngine";
@@ -99,4 +100,18 @@ export async function generateThumbnail(car) {
         "thumbnail",
         thumbnailPrompt
     );
+}
+
+// =======================================
+// AI Sales Chat
+// =======================================
+
+export async function generateSalesChat(car) {
+
+    return generateContent(
+        car,
+        "sales-chat",
+        salesChatPrompt
+    );
+
 }

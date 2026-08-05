@@ -12,6 +12,7 @@ import AIHistory from "./pages/AIHistory";
 import MainLayout from "./layouts/MainLayout";
 import AIWorkspace from "./pages/AIWorkspace";
 import CampaignPage from "./pages/CampaignPage";
+import FacebookAccounts from "./pages/Facebook/FacebookAccounts";
 
 function App() {
   return (
@@ -27,6 +28,10 @@ function App() {
     <Route path="/ai-history" element={<AIHistory />} />
     <Route path="/ai-workspace" element={<AIWorkspace />} />
     <Route path="/campaign" element={<CampaignPage />} />
+    <Route
+    path="/facebook/accounts"
+    element={<FacebookAccounts />}
+/>
   </Route>
 </Routes>
   );

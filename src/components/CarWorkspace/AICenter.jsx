@@ -1,67 +1,80 @@
-function AICenter({ car, onViewAI }) {
+function AICenter({
+    car,
+
+    onViewAI,
+
+    onGenerateAll,
+
+    onSalesChat,
+
+}) {
 
     const ai = car.aiContent || {};
+
+    const renderItem = (label, key) => (
+
+        <div
+            style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 10,
+                padding: "8px 0",
+                borderBottom: "1px solid #eee",
+            }}
+        >
+
+            <span>
+                {label}
+                {ai[key] ? " ✅" : " ❌"}
+            </span>
+
+            {ai[key] && (
+                <button onClick={() => onViewAI(key)}>
+                    👁 Xem
+                </button>
+            )}
+
+        </div>
+
+    );
 
     return (
 
         <div className="ai-memory">
 
-            <h3>🤖 AI Center</h3>
+            <h3>🤖 Toyota AI Center</h3>
 
-            <p>
-                📘 Facebook
-                {ai.facebook ? " ✅ Đã tạo" : " ❌ Chưa có"}
+            <div
+                style={{
+                    display: "flex",
+                    gap: 10,
+                    margin: "15px 0",
+                    flexWrap: "wrap",
+                }}
+            >
 
-                {ai.facebook && (
-                    <button onClick={() => onViewAI("facebook")}>
-                        👁 Xem
-                    </button>
-                )}
-            </p>
+                <button onClick={onGenerateAll}>
+                    🚀 Generate All
+                </button>
 
-            <p>
-                🎬 TikTok
-                {ai.tiktok ? " ✅ Đã tạo" : " ❌ Chưa có"}
+                <button onClick={onSalesChat}>
+                    💬 AI Sales
+                </button>
 
-                {ai.tiktok && (
-                    <button onClick={() => onViewAI("tiktok")}>
-                        👁 Xem
-                    </button>
-                )}
-            </p>
+            </div>
 
-            <p>
-                ▶️ YouTube
-                {ai.youtube ? " ✅ Đã tạo" : " ❌ Chưa có"}
+            <hr />
 
-                {ai.youtube && (
-                    <button onClick={() => onViewAI("youtube")}>
-                        👁 Xem
-                    </button>
-                )}
-            </p>
+            {renderItem("📘 Facebook", "facebook")}
 
-            <p>
-                🌐 SEO
-                {ai.seo ? " ✅ Đã tạo" : " ❌ Chưa có"}
+            {renderItem("🎬 TikTok", "tiktok")}
 
-                {ai.seo && (
-                    <button onClick={() => onViewAI("seo")}>
-                        👁 Xem
-                    </button>
-                )}
-            </p>
+            {renderItem("▶️ YouTube", "youtube")}
 
-            <p>
-                🖼 Thumbnail
-                {ai.thumbnail ? " ✅ Đã tạo" : " ❌ Chưa có"}
+            {renderItem("🌐 SEO", "seo")}
 
-                {ai.thumbnail && (
-                    <button onClick={() => onViewAI("thumbnail")}>
-                        👁 Xem
-                    </button>
-                )}
-            </p>
+            {renderItem("🖼 Thumbnail", "thumbnail")}
 
         </div>
 
