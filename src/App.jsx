@@ -13,6 +13,7 @@ import MainLayout from "./layouts/MainLayout";
 import AIWorkspace from "./pages/AIWorkspace";
 import CampaignPage from "./pages/CampaignPage";
 import FacebookAccounts from "./pages/Facebook/FacebookAccounts";
+import FacebookGroups from "./pages/Facebook/FacebookGroups";
 
 function App() {
   return (
@@ -31,6 +32,10 @@ function App() {
     <Route
     path="/facebook/accounts"
     element={<FacebookAccounts />}
+/>
+<Route
+  path="/facebook/groups"
+  element={<FacebookGroups />}
 />
   </Route>
 </Routes>

@@ -20,7 +20,7 @@ function FacebookGroups() {
 
   function handleAddGroup() {
     if (!name.trim()) {
-      alert("Vui lòng nhập tên nhóm.");
+      alert("Vui lòng nhập tên hội nhóm.");
       return;
     }
 
@@ -37,13 +37,14 @@ function FacebookGroups() {
 
   return (
     <div className="content">
+
       <h1>👥 Facebook Groups</h1>
 
-      <p>Quản lý toàn bộ hội nhóm Facebook.</p>
+      <p>Quản lý thư viện hội nhóm Facebook.</p>
 
       <hr />
 
-      <h3>➕ Thêm hội nhóm</h3>
+      <h2>➕ Thêm hội nhóm</h2>
 
       <input
         type="text"
@@ -52,26 +53,24 @@ function FacebookGroups() {
         onChange={(e) => setName(e.target.value)}
       />
 
-      <br />
-      <br />
+      <br /><br />
 
       <input
         type="text"
-        placeholder="Link hội nhóm (không bắt buộc)"
+        placeholder="Link nhóm (không bắt buộc)"
         value={url}
         onChange={(e) => setUrl(e.target.value)}
       />
 
-      <br />
-      <br />
+      <br /><br />
 
       <button onClick={handleAddGroup}>
-        💾 Lưu hội nhóm
+        ➕ Thêm nhóm
       </button>
 
       <hr />
 
-      <h3>📋 Danh sách hội nhóm</h3>
+      <h2>📚 Thư viện hội nhóm</h2>
 
       {groups.length === 0 ? (
         <p>Chưa có hội nhóm nào.</p>
@@ -89,11 +88,6 @@ function FacebookGroups() {
             <h3>👥 {group.name}</h3>
 
             <p>
-              <strong>Link:</strong>{" "}
-              {group.url || "Chưa có"}
-            </p>
-
-            <p>
               ⭐ {group.rating}/5
             </p>
 
@@ -108,9 +102,23 @@ function FacebookGroups() {
             <p>
               🚗 Phù hợp: {group.suitableCars.length} dòng xe
             </p>
+
+            {group.url && (
+              <p>
+                🌐
+                <a
+                  href={group.url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Mở hội nhóm
+                </a>
+              </p>
+            )}
           </div>
         ))
       )}
+
     </div>
   );
 }
