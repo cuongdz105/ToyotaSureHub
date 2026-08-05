@@ -1,10 +1,20 @@
 import { useEffect, useState } from "react";
+
 import {
   loadGroups,
   addGroup,
+  deleteGroup,
 } from "../../services/facebookGroupService";
 
+import PrimaryButton from "../../components/Common/PrimaryButton";
+import TextInput from "../../components/Common/TextInput";
+import SectionCard from "../../components/Common/SectionCard";
+import EmptyState from "../../components/Common/EmptyState";
+
+import FacebookGroupCard from "../../components/Facebook/FacebookGroupCard";
+
 function FacebookGroups() {
+
   const [groups, setGroups] = useState([]);
 
   const [name, setName] = useState("");
@@ -19,6 +29,7 @@ function FacebookGroups() {
   }
 
   function handleAddGroup() {
+
     if (!name.trim()) {
       alert("Vui lòng nhập tên hội nhóm.");
       return;
@@ -35,6 +46,25 @@ function FacebookGroups() {
     refreshGroups();
   }
 
+  function handleDelete(id) {
+
+    if (!window.confirm("Xóa hội nhóm này?")) {
+      return;
+    }
+
+    deleteGroup(id);
+
+    refreshGroups();
+  }
+
+  function handleEdit(group) {
+
+    alert("Sprint tiếp theo sẽ làm chức năng Sửa.");
+
+    console.log(group);
+
+  }
+
   return (
     <div className="content">
 
@@ -42,82 +72,56 @@ function FacebookGroups() {
 
       <p>Quản lý thư viện hội nhóm Facebook.</p>
 
-      <hr />
+      <SectionCard title="➕ Thêm hội nhóm">
 
-      <h2>➕ Thêm hội nhóm</h2>
+        <TextInput
+          placeholder="Tên hội nhóm"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
 
-      <input
-        type="text"
-        placeholder="Tên hội nhóm"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
+        <br />
+        <br />
 
-      <br /><br />
+        <TextInput
+          placeholder="Link Facebook Group"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+        />
 
-      <input
-        type="text"
-        placeholder="Link nhóm (không bắt buộc)"
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-      />
+        <br />
+        <br />
 
-      <br /><br />
+        <PrimaryButton onClick={handleAddGroup}>
+          ➕ Thêm nhóm
+        </PrimaryButton>
 
-      <button onClick={handleAddGroup}>
-        ➕ Thêm nhóm
-      </button>
+      </SectionCard>
 
-      <hr />
+      <SectionCard title="📚 Thư viện hội nhóm">
 
-      <h2>📚 Thư viện hội nhóm</h2>
+        {groups.length === 0 ? (
 
-      {groups.length === 0 ? (
-        <p>Chưa có hội nhóm nào.</p>
-      ) : (
-        groups.map((group) => (
-          <div
-            key={group.id}
-            style={{
-              border: "1px solid #ddd",
-              borderRadius: "10px",
-              padding: "15px",
-              marginBottom: "15px",
-            }}
-          >
-            <h3>👥 {group.name}</h3>
+          <EmptyState
+            text="Chưa có hội nhóm."
+          />
 
-            <p>
-              ⭐ {group.rating}/5
-            </p>
+        ) : (
 
-            <p>
-              🟢 {group.status}
-            </p>
+          groups.map((group) => (
 
-            <p>
-              📌 Đã đăng: {group.totalPosts}
-            </p>
+            <FacebookGroupCard
+              key={group.id}
+              group={group}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
 
-            <p>
-              🚗 Phù hợp: {group.suitableCars.length} dòng xe
-            </p>
+          ))
 
-            {group.url && (
-              <p>
-                🌐
-                <a
-                  href={group.url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Mở hội nhóm
-                </a>
-              </p>
-            )}
-          </div>
-        ))
-      )}
+        )}
+
+      </SectionCard>
 
     </div>
   );
