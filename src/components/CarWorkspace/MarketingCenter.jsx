@@ -1,8 +1,13 @@
 import "./MarketingCenter.css";
+import { useNavigate } from "react-router-dom";
+
 import CampaignEngine from "../../engine/CampaignEngine";
 import PlatformCard from "./PlatformCard";
+import { startPosting } from "../../services/postingSessionService";
 
 function MarketingCenter({ car }) {
+
+    const navigate = useNavigate();
 
     const ai = car.aiContent || {};
 
@@ -17,6 +22,14 @@ function MarketingCenter({ car }) {
 
         alert(`Đã tạo ${platform} Campaign`);
     };
+
+    const handleFacebookWorkflow = () => {
+
+    startPosting(car);
+
+    navigate("/facebook/groups");
+
+};
 
     const platforms = [
         {
@@ -48,7 +61,20 @@ function MarketingCenter({ car }) {
     return (
         <div className="marketing-center">
 
-            
+            <button
+                onClick={handleFacebookWorkflow}
+                style={{
+                    width: "100%",
+                    marginBottom: 20,
+                    padding: "14px",
+                    fontSize: "18px",
+                    borderRadius: "10px",
+                    cursor: "pointer",
+                }}
+            >
+                🚀 Bắt đầu đăng Facebook
+            </button>
+
             <div className="marketing-grid">
 
                 {platforms.map((platform) => (
@@ -59,11 +85,9 @@ function MarketingCenter({ car }) {
                         title={platform.title}
                         generated={platform.generated}
                         published={false}
-
                         onView={() =>
                             alert(`Xem ${platform.title}`)
                         }
-
                         onPublish={() =>
                             createCampaign(platform.key)
                         }

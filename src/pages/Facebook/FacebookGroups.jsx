@@ -12,6 +12,7 @@ import SectionCard from "../../components/Common/SectionCard";
 import EmptyState from "../../components/Common/EmptyState";
 
 import FacebookGroupCard from "../../components/Facebook/FacebookGroupCard";
+import { getCurrentPosting } from "../../services/postingSessionService";
 
 function FacebookGroups() {
 
@@ -19,6 +20,7 @@ function FacebookGroups() {
 
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
+  const postingCar = getCurrentPosting();
 
   useEffect(() => {
     refreshGroups();
@@ -71,6 +73,26 @@ function FacebookGroups() {
       <h1>👥 Facebook Groups</h1>
 
       <p>Quản lý thư viện hội nhóm Facebook.</p>
+
+      {postingCar && (
+
+    <SectionCard title="🚗 Đang bán">
+
+        <h3>
+            {postingCar.brand} {postingCar.model}
+        </h3>
+
+        <p>
+            {postingCar.version}
+        </p>
+
+        <p>
+            {postingCar.year}
+        </p>
+
+    </SectionCard>
+
+)}
 
       <SectionCard title="➕ Thêm hội nhóm">
 
