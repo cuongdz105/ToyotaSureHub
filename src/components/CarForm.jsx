@@ -80,7 +80,7 @@ function CarForm({ editCar }) {
     }
 
    if (editCar) {
-  updateCar(car);
+  updateCar(car.id, car);
 
   alert("✅ Đã cập nhật xe");
 } else {
@@ -343,11 +343,11 @@ checked={car.engineOriginal}
  <ImageUploader
   images={car.images}
   setImages={(images) =>
-    setCar({
-      ...car,
-      images,
-    })
-  }
+  setCar((prev) => ({
+    ...prev,
+    images,
+  }))
+}
 />
       <button
         className="save-btn"

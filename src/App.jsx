@@ -14,30 +14,45 @@ import AIWorkspace from "./pages/AIWorkspace";
 import CampaignPage from "./pages/CampaignPage";
 import FacebookAccounts from "./pages/Facebook/FacebookAccounts";
 import FacebookGroups from "./pages/Facebook/FacebookGroups";
+import FacebookPostPreview from "./pages/Facebook/FacebookPostPreview";
+import FacebookPostingQueue
+  from "./pages/Facebook/FacebookPostingQueue";
 
 function App() {
   return (
     <Routes>
   <Route element={<MainLayout />}>
-    <Route path="/" element={<Dashboard />} />
-    <Route path="/cars" element={<CarList />} />
-    <Route path="/cars/new" element={<AddCar />} />
-    <Route path="/edit/:id" element={<EditCar />} />
-    <Route path="/customers" element={<Customers />} />
-    <Route path="/cars/:id" element={<CarWorkspace />} />
-    <Route path="/settings" element={<Settings />} />
-    <Route path="/ai-history" element={<AIHistory />} />
-    <Route path="/ai-workspace" element={<AIWorkspace />} />
-    <Route path="/campaign" element={<CampaignPage />} />
-    <Route
+  <Route path="/" element={<Dashboard />} />
+  <Route path="/cars" element={<CarList />} />
+  <Route path="/cars/new" element={<AddCar />} />
+  <Route path="/edit/:id" element={<EditCar />} />
+  <Route path="/customers" element={<Customers />} />
+  <Route path="/cars/:id" element={<CarWorkspace />} />
+  <Route path="/settings" element={<Settings />} />
+  <Route path="/ai-history" element={<AIHistory />} />
+  <Route path="/ai-workspace" element={<AIWorkspace />} />
+  <Route path="/campaign" element={<CampaignPage />} />
+
+  <Route
     path="/facebook/accounts"
     element={<FacebookAccounts />}
+  />
+
+  <Route
+    path="/facebook/groups"
+    element={<FacebookGroups />}
+  />
+
+  <Route
+    path="/facebook/post"
+    element={<FacebookPostPreview />}
+  />
+
+  <Route
+  path="/facebook/queue"
+  element={<FacebookPostingQueue />}
 />
-<Route
-  path="/facebook/groups"
-  element={<FacebookGroups />}
-/>
-  </Route>
+</Route>
 </Routes>
   );
 }
