@@ -1,9 +1,38 @@
 const STORAGE_KEY = "toyota_fb_groups";
 
 export function loadGroups() {
-  return JSON.parse(
-    localStorage.getItem(STORAGE_KEY) || "[]"
-  );
+  try {
+    const groups = JSON.parse(
+      localStorage.getItem(STORAGE_KEY) || "[]"
+    );
+
+    if (!Array.isArray(groups)) {
+      return [];
+    }
+
+    /*
+     * Migration dữ liệu cũ
+     *
+     * Nếu Group cũ chưa có accountIds
+     * thì tự động thêm mảng rỗng.
+     *
+     * Không làm mất dữ liệu cũ.
+     */
+    return groups.map((group) => ({
+      ...group,
+
+      accountIds: Array.isArray(group.accountIds)
+        ? group.accountIds
+        : [],
+    }));
+  } catch (error) {
+    console.error(
+      "Không đọc được Facebook Groups:",
+      error
+    );
+
+    return [];
+  }
 }
 
 export function saveGroups(groups) {
@@ -16,7 +45,7 @@ export function saveGroups(groups) {
 export function addGroup(group) {
   const groups = loadGroups();
 
-  groups.unshift({
+  const newGroup = {
     id: Date.now(),
 
     rating: 5,
@@ -27,7 +56,13 @@ export function addGroup(group) {
 
     suitableCars: [],
 
-    accountId: null,
+    /*
+     * Danh sách tài khoản Facebook
+     * được phép đăng vào nhóm này.
+     *
+     * Một nhóm có thể có nhiều tài khoản.
+     */
+    accountIds: [],
 
     notes: "",
 
@@ -41,26 +76,43 @@ export function addGroup(group) {
 
     status: "active",
 
-    createdAt: new Date().toISOString(),
+    createdAt:
+      new Date().toISOString(),
 
     ...group,
-  });
+  };
+
+  groups.unshift(newGroup);
 
   saveGroups(groups);
+
+  return newGroup;
 }
 
 export function updateGroup(id, data) {
-  const groups = loadGroups().map((item) =>
-    item.id === id
-      ? { ...item, ...data }
-      : item
+  const groups = loadGroups();
+
+  const updatedGroups = groups.map(
+    (item) =>
+      item.id === id
+        ? {
+            ...item,
+            ...data,
+          }
+        : item
   );
 
-  saveGroups(groups);
+  saveGroups(updatedGroups);
+
+  return updatedGroups.find(
+    (item) => item.id === id
+  );
 }
 
 export function deleteGroup(id) {
   saveGroups(
-    loadGroups().filter((item) => item.id !== id)
+    loadGroups().filter(
+      (item) => item.id !== id
+    )
   );
 }

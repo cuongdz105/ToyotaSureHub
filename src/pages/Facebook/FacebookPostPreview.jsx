@@ -419,65 +419,65 @@ const selectedAccount =
       </SectionCard>
 
       <SectionCard title="🚀 Sẵn sàng đăng">
-        <p>
-<p>
-    👤 Tài khoản:{" "}
-    <strong>
+  <div>
+    <div style={{ marginBottom: "10px" }}>
+      👤 Tài khoản:{" "}
+      <strong>
         {accounts.find(
-            (account) =>
-                String(account.id) ===
-                String(selectedAccountId)
-        )?.name ||
-            "Chưa chọn tài khoản"}
-    </strong>
-</p>
+          (account) =>
+            String(account.id) ===
+            String(selectedAccountId)
+        )?.name || "Chưa chọn tài khoản"}
+      </strong>
+    </div>
 
-          👥 Nhóm:{" "}
-          <strong>
-            {group?.name ||
-              "Chưa chọn nhóm"}
-          </strong>
-        </p>
+    <div style={{ marginBottom: "10px" }}>
+      👥 Nhóm:{" "}
+      <strong>
+        {group?.name || "Chưa chọn nhóm"}
+      </strong>
+    </div>
 
-        <p>
-          📷 Số ảnh:{" "}
-          <strong>
-            {images.length}
-          </strong>
-        </p>
+    <div style={{ marginBottom: "10px" }}>
+      📷 Số ảnh:{" "}
+      <strong>
+        {images.length}
+      </strong>
+    </div>
 
-        <p>
-          📝 Nội dung:{" "}
-          <strong>
-            {content.trim()
-              ? "Đã có"
-              : "Chưa có"}
-          </strong>
-        </p>
+    <div style={{ marginBottom: "10px" }}>
+      📝 Nội dung:{" "}
+      <strong>
+        {content.trim()
+          ? "Đã có"
+          : "Chưa có"}
+      </strong>
+    </div>
 
-        <br />
+    <br />
 
-        <PrimaryButton
-          onClick={handleAddToQueue}
-          disabled={addingToQueue}
-        >
-          {addingToQueue
-            ? "⏳ Đang thêm vào Queue..."
-            : "➕ THÊM VÀO QUEUE"}
-        </PrimaryButton>
+    <PrimaryButton
+      onClick={handleAddToQueue}
+      disabled={addingToQueue}
+    >
+      {addingToQueue
+        ? "⏳ Đang thêm vào Queue..."
+        : "➕ THÊM VÀO QUEUE"}
+    </PrimaryButton>
 
-        <div
-          style={{
-            marginTop: "12px",
-            color: "#666",
-            fontSize: "14px",
-          }}
-        >
-          💡 Bài đăng sẽ được đưa vào hàng
-          đợi. Chưa đăng Facebook thật ở
-          bước này.
-        </div>
-      </SectionCard>
+    <div
+      style={{
+        marginTop: "12px",
+        color: "#666",
+        fontSize: "14px",
+      }}
+    >
+      💡 Bài đăng sẽ được đưa vào hàng
+      đợi. Chưa đăng Facebook thật ở
+      bước này.
+    </div>
+  </div>
+</SectionCard>
     </main>
   );
 }

@@ -11,6 +11,10 @@
  * - Queue Worker không cần viết lại
  */
 
+import {
+  loadAccounts,
+} from "./facebookAccountService";
+
 export const FACEBOOK_POSTING_MODE =
   "simulation";
 
@@ -83,6 +87,18 @@ function findCar(carId) {
   );
 }
 
+function findAccount(accountId) {
+  const accounts = loadAccounts();
+
+  return (
+    accounts.find(
+      (account) =>
+        String(account.id) ===
+        String(accountId)
+    ) || null
+  );
+}
+
 /**
  * Lấy danh sách ảnh theo nhiều format
  *
@@ -151,8 +167,14 @@ function validatePostData(job) {
       "Bài đăng chưa có ảnh."
     );
   }
-}
 
+
+if (!job.accountId) {
+  throw new Error(
+    "Chưa chọn tài khoản Facebook."
+  );
+}
+}
 /**
  * Facebook Posting Engine
  *
@@ -192,6 +214,29 @@ export async function runFacebookPostingEngine(
       `Không tìm thấy xe với ID: ${job.carId}`
     );
   }
+
+const account = findAccount(
+  job.accountId
+);
+
+if (!account) {
+  throw new Error(
+    `Không tìm thấy tài khoản Facebook với ID: ${job.accountId}`
+  );
+}
+
+if (account.status !== "active") {
+  throw new Error(
+    `Tài khoản Facebook "${account.name}" hiện không hoạt động.`
+  );
+}
+
+logs.push(
+  createLog(
+    `👤 Tài khoản Facebook: ${account.name}`,
+    "success"
+  )
+);
 
   logs.push(
     createLog(
@@ -289,98 +334,85 @@ export async function runFacebookPostingEngine(
 
   await delay(500);
 
-  // --------------------------------
-  // 7. SIMULATION
-  // --------------------------------
+    // --------------------------------
+// 7. SIMULATION
+// --------------------------------
 
-  if (
-    FACEBOOK_POSTING_MODE ===
-    "simulation"
-  ) {
-    logs.push(
-      createLog(
-        "⚠️ Đang ở chế độ mô phỏng — chưa gửi dữ liệu tới Facebook",
-        "warning"
-      )
-    );
-
-    await delay(700);
-
-    logs.push(
-      createLog(
-        "🚀 Posting Engine đã hoàn tất bước mô phỏng",
-        "success"
-      )
-    );
-
-    logs.push(
-      createLog(
-        "🟢 Bài đăng mô phỏng thành công",
-        "success"
-      )
-    );
-
-    return {
-      success: true,
-
-      mode: "simulation",
-
-      // CỰC KỲ QUAN TRỌNG:
-      // false = chưa đăng Facebook thật
-      published: false,
-
-      jobId: job.id,
-
-      carId: job.carId,
-
-      car: {
-        brand:
-          car.brand || "",
-
-        model:
-          car.model || "",
-
-        version:
-          car.version || "",
-
-        year:
-          car.year || "",
-
-        color:
-          car.color || "",
-      },
-
-      group: {
-        id:
-          job.group.id ||
-          null,
-
-        name:
-          job.group.name ||
-          "",
-
-        url:
-          job.group.url ||
-          "",
-      },
-
-      imageCount:
-        images.length,
-
-      logs,
-
-      completedAt: now(),
-    };
-  }
-
-  throw new Error(
-    "Facebook Posting Engine chưa được cấu hình."
+if (
+  FACEBOOK_POSTING_MODE ===
+  "simulation"
+) {
+  logs.push(
+    createLog(
+      "⚠️ Đang ở chế độ mô phỏng — chưa gửi dữ liệu tới Facebook",
+      "warning"
+    )
   );
+
+  await delay(700);
+
+  logs.push(
+    createLog(
+      "🚀 Posting Engine đã hoàn tất bước mô phỏng",
+      "success"
+    )
+  );
+
+  logs.push(
+    createLog(
+      "🟢 Bài đăng mô phỏng thành công",
+      "success"
+    )
+  );
+
+  return {
+    success: true,
+
+    mode: "simulation",
+
+    // false = chưa đăng Facebook thật
+    published: false,
+
+    jobId: job.id,
+
+    carId: job.carId,
+
+    car: {
+      brand: car.brand || "",
+      model: car.model || "",
+      version: car.version || "",
+      year: car.year || "",
+      color: car.color || "",
+    },
+
+    group: {
+      id: job.group?.id || null,
+      name: job.group?.name || "",
+      url: job.group?.url || "",
+    },
+
+    account: {
+      id: account.id || null,
+      name: account.name || "",
+      status: account.status || "",
+    },
+
+    imageCount: images.length,
+
+    logs,
+
+    completedAt: now(),
+  };
 }
 
-/**
- * Delay cho Simulation
- */
+throw new Error(
+  "Facebook Posting Engine chưa được cấu hình."
+);
+}
+// --------------------------------
+// Delay cho Simulation
+// --------------------------------
+
 function delay(ms) {
   return new Promise(
     (resolve) =>
