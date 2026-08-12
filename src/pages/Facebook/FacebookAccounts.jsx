@@ -8,61 +8,149 @@ import {
     addAccount,
     deleteAccount,
     setDefaultAccount,
+    updateAccount,
 } from "../../services/facebookAccountService";
 
-function FacebookAccounts() {
-    const [accounts, setAccounts] = useState([]);
+import {
+    loadGroups,
+} from "../../services/facebookGroupService";
 
-    const [name, setName] = useState("");
+function FacebookAccounts() {
+    const [accounts, setAccounts] =
+        useState([]);
+
+    const [groups, setGroups] =
+        useState([]);
+
+    const [name, setName] =
+        useState("");
+
     const [profileUrl, setProfileUrl] =
         useState("");
-    const [note, setNote] = useState("");
+
+    const [note, setNote] =
+        useState("");
+
+    /*
+     * Account đang mở phần
+     * quản lý quyền Group
+     */
+    const [
+        managingAccountId,
+        setManagingAccountId,
+    ] = useState(null);
+
+    /*
+     * Cho phép tất cả Group
+     */
+    const [
+        allowAllGroups,
+        setAllowAllGroups,
+    ] = useState(true);
+
+    /*
+     * Danh sách Group được phép
+     * khi allowAllGroups = false
+     */
+    const [
+        allowedGroupIds,
+        setAllowedGroupIds,
+    ] = useState([]);
+
+    /*
+     * Danh sách Group bị loại trừ
+     * khi allowAllGroups = true
+     */
+    const [
+        excludedGroupIds,
+        setExcludedGroupIds,
+    ] = useState([]);
+
+    /*
+     * Tìm kiếm Group
+     */
+    const [
+        groupSearch,
+        setGroupSearch,
+    ] = useState("");
 
     useEffect(() => {
-        refreshAccounts();
+        refreshData();
     }, []);
 
-    function refreshAccounts() {
-        setAccounts(loadAccounts());
+    function refreshData() {
+        setAccounts(
+            loadAccounts()
+        );
+
+        setGroups(
+            loadGroups()
+        );
     }
+
+    /*
+     * ==========================================
+     * THÊM ACCOUNT
+     * ==========================================
+     */
 
     function handleAddAccount() {
         if (!name.trim()) {
             alert(
                 "⚠️ Vui lòng nhập tên tài khoản."
             );
+
             return;
         }
 
         addAccount({
-            name: name.trim(),
+            name:
+                name.trim(),
+
             profileUrl:
                 profileUrl.trim(),
-            note: note.trim(),
+
+            note:
+                note.trim(),
         });
 
         setName("");
         setProfileUrl("");
         setNote("");
 
-        refreshAccounts();
+        refreshData();
 
         alert(
             "✅ Đã thêm tài khoản Facebook."
         );
     }
 
+    /*
+     * ==========================================
+     * ĐẶT MẶC ĐỊNH
+     * ==========================================
+     */
+
     function handleSetDefault(id) {
         setDefaultAccount(id);
 
-        refreshAccounts();
+        refreshData();
 
         alert(
             "⭐ Đã đặt tài khoản làm mặc định."
         );
     }
 
-    function handleDelete(id, accountName) {
+    /*
+     * ==========================================
+     * XÓA ACCOUNT
+     * ==========================================
+     */
+
+    function handleDelete(
+        id,
+        accountName
+    ) {
         const confirmed =
             window.confirm(
                 `Xóa tài khoản "${accountName}"?`
@@ -74,7 +162,253 @@ function FacebookAccounts() {
 
         deleteAccount(id);
 
-        refreshAccounts();
+        if (
+            managingAccountId === id
+        ) {
+            closeGroupManager();
+        }
+
+        refreshData();
+    }
+
+    /*
+     * ==========================================
+     * MỞ QUẢN LÝ GROUP
+     * ==========================================
+     */
+
+    function handleOpenGroupManager(
+        account
+    ) {
+        setManagingAccountId(
+            account.id
+        );
+
+        setAllowAllGroups(
+            account.allowAllGroups !==
+                false
+        );
+
+        setAllowedGroupIds(
+            Array.isArray(
+                account.allowedGroupIds
+            )
+                ? account.allowedGroupIds.map(
+                      (id) =>
+                          String(id)
+                  )
+                : []
+        );
+
+        setExcludedGroupIds(
+            Array.isArray(
+                account.excludedGroupIds
+            )
+                ? account.excludedGroupIds.map(
+                      (id) =>
+                          String(id)
+                  )
+                : []
+        );
+
+        setGroupSearch("");
+    }
+
+    /*
+     * ==========================================
+     * ĐÓNG QUẢN LÝ GROUP
+     * ==========================================
+     */
+
+    function closeGroupManager() {
+        setManagingAccountId(
+            null
+        );
+
+        setAllowAllGroups(true);
+
+        setAllowedGroupIds([]);
+
+        setExcludedGroupIds([]);
+
+        setGroupSearch("");
+    }
+
+    /*
+     * ==========================================
+     * TICK GROUP ĐƯỢC PHÉP
+     * ==========================================
+     */
+
+    function handleToggleAllowedGroup(
+        groupId
+    ) {
+        const id =
+            String(groupId);
+
+        setAllowedGroupIds(
+            (current) => {
+                if (
+                    current.includes(id)
+                ) {
+                    return current.filter(
+                        (item) =>
+                            item !== id
+                    );
+                }
+
+                return [
+                    ...current,
+                    id,
+                ];
+            }
+        );
+    }
+
+    /*
+     * ==========================================
+     * TICK GROUP NGOẠI LỆ
+     * ==========================================
+     */
+
+    function handleToggleExcludedGroup(
+        groupId
+    ) {
+        const id =
+            String(groupId);
+
+        setExcludedGroupIds(
+            (current) => {
+                if (
+                    current.includes(id)
+                ) {
+                    return current.filter(
+                        (item) =>
+                            item !== id
+                    );
+                }
+
+                return [
+                    ...current,
+                    id,
+                ];
+            }
+        );
+    }
+
+    /*
+     * ==========================================
+     * LƯU QUYỀN GROUP
+     * ==========================================
+     */
+
+    function handleSaveGroupPermissions(
+        account
+    ) {
+        updateAccount(
+            account.id,
+            {
+                allowAllGroups,
+
+                allowedGroupIds:
+                    allowAllGroups
+                        ? []
+                        : allowedGroupIds,
+
+                excludedGroupIds:
+                    allowAllGroups
+                        ? excludedGroupIds
+                        : [],
+            }
+        );
+
+        refreshData();
+
+        closeGroupManager();
+
+        alert(
+            "✅ Đã lưu quyền đăng nhóm cho tài khoản."
+        );
+    }
+
+    /*
+     * ==========================================
+     * TÌM GROUP
+     * ==========================================
+     */
+
+    function getFilteredGroups() {
+        const keyword =
+            groupSearch
+                .trim()
+                .toLowerCase();
+
+        if (!keyword) {
+            return groups;
+        }
+
+        return groups.filter(
+            (group) => {
+                const nameMatch =
+                    group.name
+                        ?.toLowerCase()
+                        .includes(
+                            keyword
+                        );
+
+                const urlMatch =
+                    group.url
+                        ?.toLowerCase()
+                        .includes(
+                            keyword
+                        );
+
+                return (
+                    nameMatch ||
+                    urlMatch
+                );
+            }
+        );
+    }
+
+    /*
+     * ==========================================
+     * ĐẾM QUYỀN
+     * ==========================================
+     */
+
+    function getPermissionText(
+        account
+    ) {
+        if (
+            account.allowAllGroups !==
+            false
+        ) {
+            const excluded =
+                Array.isArray(
+                    account.excludedGroupIds
+                )
+                    ? account
+                          .excludedGroupIds
+                          .length
+                    : 0;
+
+            if (excluded === 0) {
+                return "Tất cả các nhóm";
+            }
+
+            return `Tất cả nhóm, trừ ${excluded} nhóm`;
+        }
+
+        const allowed =
+            Array.isArray(
+                account.allowedGroupIds
+            )
+                ? account.allowedGroupIds
+                      .length
+                : 0;
+
+        return `${allowed} nhóm được phép`;
     }
 
     return (
@@ -85,6 +419,7 @@ function FacebookAccounts() {
                 margin: "0 auto",
             }}
         >
+
             <h1
                 style={{
                     marginBottom: "6px",
@@ -107,7 +442,9 @@ function FacebookAccounts() {
                 THÊM TÀI KHOẢN
             ========================= */}
 
-            <SectionCard title="➕ Thêm tài khoản">
+            <SectionCard
+                title="➕ Thêm tài khoản"
+            >
                 <div
                     style={{
                         display: "grid",
@@ -115,12 +452,16 @@ function FacebookAccounts() {
                         maxWidth: "700px",
                     }}
                 >
+
                     <div>
                         <label
                             style={{
-                                display: "block",
-                                fontWeight: "600",
-                                marginBottom: "6px",
+                                display:
+                                    "block",
+                                fontWeight:
+                                    "600",
+                                marginBottom:
+                                    "6px",
                             }}
                         >
                             Tên tài khoản
@@ -139,12 +480,14 @@ function FacebookAccounts() {
                                 width: "100%",
                                 boxSizing:
                                     "border-box",
-                                padding: "11px",
+                                padding:
+                                    "11px",
                                 border:
                                     "1px solid #ccc",
                                 borderRadius:
                                     "8px",
-                                fontSize: "15px",
+                                fontSize:
+                                    "15px",
                             }}
                         />
                     </div>
@@ -152,9 +495,12 @@ function FacebookAccounts() {
                     <div>
                         <label
                             style={{
-                                display: "block",
-                                fontWeight: "600",
-                                marginBottom: "6px",
+                                display:
+                                    "block",
+                                fontWeight:
+                                    "600",
+                                marginBottom:
+                                    "6px",
                             }}
                         >
                             Link Facebook
@@ -163,7 +509,9 @@ function FacebookAccounts() {
                         <input
                             type="text"
                             placeholder="https://facebook.com/..."
-                            value={profileUrl}
+                            value={
+                                profileUrl
+                            }
                             onChange={(e) =>
                                 setProfileUrl(
                                     e.target.value
@@ -173,12 +521,14 @@ function FacebookAccounts() {
                                 width: "100%",
                                 boxSizing:
                                     "border-box",
-                                padding: "11px",
+                                padding:
+                                    "11px",
                                 border:
                                     "1px solid #ccc",
                                 borderRadius:
                                     "8px",
-                                fontSize: "15px",
+                                fontSize:
+                                    "15px",
                             }}
                         />
                     </div>
@@ -186,9 +536,12 @@ function FacebookAccounts() {
                     <div>
                         <label
                             style={{
-                                display: "block",
-                                fontWeight: "600",
-                                marginBottom: "6px",
+                                display:
+                                    "block",
+                                fontWeight:
+                                    "600",
+                                marginBottom:
+                                    "6px",
                             }}
                         >
                             Ghi chú
@@ -207,13 +560,16 @@ function FacebookAccounts() {
                                 width: "100%",
                                 boxSizing:
                                     "border-box",
-                                padding: "11px",
+                                padding:
+                                    "11px",
                                 border:
                                     "1px solid #ccc",
                                 borderRadius:
                                     "8px",
-                                fontSize: "15px",
-                                resize: "vertical",
+                                fontSize:
+                                    "15px",
+                                resize:
+                                    "vertical",
                             }}
                         />
                     </div>
@@ -227,6 +583,7 @@ function FacebookAccounts() {
                             💾 LƯU TÀI KHOẢN
                         </PrimaryButton>
                     </div>
+
                 </div>
             </SectionCard>
 
@@ -234,235 +591,644 @@ function FacebookAccounts() {
                 DANH SÁCH ACCOUNT
             ========================= */}
 
-            <SectionCard title="📋 Danh sách tài khoản">
-                {accounts.length === 0 ? (
+            <SectionCard
+                title="📋 Danh sách tài khoản"
+            >
+
+                {accounts.length ===
+                0 ? (
+
                     <div
                         style={{
-                            padding: "30px",
-                            textAlign: "center",
-                            color: "#777",
+                            padding:
+                                "30px",
+                            textAlign:
+                                "center",
+                            color:
+                                "#777",
                         }}
                     >
                         👤 Chưa có tài khoản
                         Facebook nào.
                     </div>
+
                 ) : (
+
                     <div
                         style={{
-                            display: "grid",
+                            display:
+                                "grid",
                             gridTemplateColumns:
-                                "repeat(auto-fill, minmax(320px, 1fr))",
-                            gap: "16px",
+                                "repeat(auto-fill, minmax(340px, 1fr))",
+                            gap:
+                                "16px",
                         }}
                     >
+
                         {accounts.map(
-                            (account) => (
-                                <div
-                                    key={
-                                        account.id
-                                    }
-                                    style={{
-                                        border:
-                                            account.isDefault
-                                                ? "2px solid #e11"
-                                                : "1px solid #ddd",
+                            (account) => {
 
-                                        borderRadius:
-                                            "12px",
+                                const isManaging =
+                                    managingAccountId ===
+                                    account.id;
 
-                                        padding:
-                                            "18px",
-
-                                        background:
-                                            "#fff",
-
-                                        boxShadow:
-                                            "0 2px 8px rgba(0,0,0,0.06)",
-                                    }}
-                                >
-                                    {/* HEADER */}
-
+                                return (
                                     <div
+                                        key={
+                                            account.id
+                                        }
                                         style={{
-                                            display:
-                                                "flex",
-                                            justifyContent:
-                                                "space-between",
-                                            alignItems:
-                                                "flex-start",
-                                            gap: "10px",
+                                            border:
+                                                account.isDefault
+                                                    ? "2px solid #e11"
+                                                    : "1px solid #ddd",
+
+                                            borderRadius:
+                                                "12px",
+
+                                            padding:
+                                                "18px",
+
+                                            background:
+                                                "#fff",
+
+                                            boxShadow:
+                                                "0 2px 8px rgba(0,0,0,0.06)",
                                         }}
                                     >
-                                        <div>
-                                            <h3
-                                                style={{
-                                                    margin: 0,
-                                                    marginBottom:
-                                                        "6px",
-                                                }}
-                                            >
-                                                👤{" "}
-                                                {
-                                                    account.name
-                                                }
-                                            </h3>
 
-                                            {account.isDefault && (
-                                                <span
-                                                    style={{
-                                                        display:
-                                                            "inline-block",
-                                                        background:
-                                                            "#e11",
-                                                        color:
-                                                            "#fff",
-                                                        padding:
-                                                            "4px 9px",
-                                                        borderRadius:
-                                                            "20px",
-                                                        fontSize:
-                                                            "12px",
-                                                        fontWeight:
-                                                            "600",
-                                                    }}
-                                                >
-                                                    ⭐ MẶC ĐỊNH
-                                                </span>
-                                            )}
-                                        </div>
+                                        {/* HEADER */}
 
-                                        <span
+                                        <div
                                             style={{
-                                                color:
-                                                    account.status ===
-                                                    "active"
-                                                        ? "#0aaf50"
-                                                        : "#999",
-
-                                                fontWeight:
-                                                    "600",
+                                                display:
+                                                    "flex",
+                                                justifyContent:
+                                                    "space-between",
+                                                alignItems:
+                                                    "flex-start",
+                                                gap:
+                                                    "10px",
                                             }}
                                         >
-                                            ●{" "}
-                                            {account.status ===
-                                            "active"
-                                                ? "Hoạt động"
-                                                : account.status}
-                                        </span>
-                                    </div>
 
-                                    <hr />
+                                            <div>
 
-                                    {/* THÔNG TIN */}
+                                                <h3
+                                                    style={{
+                                                        margin:
+                                                            0,
+                                                        marginBottom:
+                                                            "6px",
+                                                    }}
+                                                >
+                                                    👤{" "}
+                                                    {
+                                                        account.name
+                                                    }
+                                                </h3>
 
-                                    <p>
-                                        🔗{" "}
-                                        <strong>
-                                            Link:
-                                        </strong>{" "}
-                                        {account.profileUrl ||
-                                            "Chưa có"}
-                                    </p>
+                                                {account.isDefault && (
+                                                    <span
+                                                        style={{
+                                                            display:
+                                                                "inline-block",
+                                                            background:
+                                                                "#e11",
+                                                            color:
+                                                                "#fff",
+                                                            padding:
+                                                                "4px 9px",
+                                                            borderRadius:
+                                                                "20px",
+                                                            fontSize:
+                                                                "12px",
+                                                            fontWeight:
+                                                                "600",
+                                                        }}
+                                                    >
+                                                        ⭐ MẶC ĐỊNH
+                                                    </span>
+                                                )}
 
-                                    <p>
-                                        📝{" "}
-                                        <strong>
-                                            Ghi chú:
-                                        </strong>{" "}
-                                        {account.note ||
-                                            "Không có"}
-                                    </p>
+                                            </div>
 
-                                    <p>
-                                        👥{" "}
-                                        <strong>
-                                            Số nhóm:
-                                        </strong>{" "}
-                                        {Array.isArray(
-                                            account.groups
-                                        )
-                                            ? account
-                                                  .groups
-                                                  .length
-                                            : 0}
-                                    </p>
+                                            <span
+                                                style={{
+                                                    color:
+                                                        account.status ===
+                                                        "active"
+                                                            ? "#0aaf50"
+                                                            : "#999",
 
-                                    <p>
-                                        📤{" "}
-                                        <strong>
-                                            Tổng bài:
-                                        </strong>{" "}
-                                        {account.totalPosts ||
-                                            0}
-                                    </p>
+                                                    fontWeight:
+                                                        "600",
+                                                }}
+                                            >
+                                                ●{" "}
+                                                {account.status ===
+                                                "active"
+                                                    ? "Hoạt động"
+                                                    : account.status}
+                                            </span>
 
-                                    {/* ACTIONS */}
+                                        </div>
 
-                                    <div
-                                        style={{
-                                            display:
-                                                "flex",
-                                            gap: "8px",
-                                            flexWrap:
-                                                "wrap",
-                                            marginTop:
-                                                "16px",
-                                        }}
-                                    >
-                                        {!account.isDefault && (
+                                        <hr />
+
+                                        {/* THÔNG TIN */}
+
+                                        <p>
+                                            🔗{" "}
+                                            <strong>
+                                                Link:
+                                            </strong>{" "}
+                                            {account.profileUrl ||
+                                                "Chưa có"}
+                                        </p>
+
+                                        <p>
+                                            📝{" "}
+                                            <strong>
+                                                Ghi chú:
+                                            </strong>{" "}
+                                            {account.note ||
+                                                "Không có"}
+                                        </p>
+
+                                        <p>
+                                            👥{" "}
+                                            <strong>
+                                                Quyền nhóm:
+                                            </strong>{" "}
+                                            {getPermissionText(
+                                                account
+                                            )}
+                                        </p>
+
+                                        <p>
+                                            📤{" "}
+                                            <strong>
+                                                Tổng bài:
+                                            </strong>{" "}
+                                            {account.totalPosts ||
+                                                0}
+                                        </p>
+
+                                        {/* ACTIONS */}
+
+                                        <div
+                                            style={{
+                                                display:
+                                                    "flex",
+                                                gap:
+                                                    "8px",
+                                                flexWrap:
+                                                    "wrap",
+                                                marginTop:
+                                                    "16px",
+                                            }}
+                                        >
+
+                                            {!account.isDefault && (
+                                                <PrimaryButton
+                                                    onClick={() =>
+                                                        handleSetDefault(
+                                                            account.id
+                                                        )
+                                                    }
+                                                >
+                                                    ⭐ Đặt mặc định
+                                                </PrimaryButton>
+                                            )}
+
                                             <PrimaryButton
                                                 onClick={() =>
-                                                    handleSetDefault(
-                                                        account.id
+                                                    handleOpenGroupManager(
+                                                        account
                                                     )
                                                 }
                                             >
-                                                ⭐ Đặt mặc định
+                                                👥 Quản lý nhóm
                                             </PrimaryButton>
+
+                                            <PrimaryButton
+                                                onClick={() =>
+                                                    handleDelete(
+                                                        account.id,
+                                                        account.name
+                                                    )
+                                                }
+                                            >
+                                                🗑️ Xóa
+                                            </PrimaryButton>
+
+                                        </div>
+
+                                        {/* =========================
+                                            GROUP PERMISSION MANAGER
+                                        ========================= */}
+
+                                        {isManaging && (
+
+                                            <div
+                                                style={{
+                                                    marginTop:
+                                                        "18px",
+
+                                                    padding:
+                                                        "16px",
+
+                                                    background:
+                                                        "#f8f9fa",
+
+                                                    border:
+                                                        "1px solid #ddd",
+
+                                                    borderRadius:
+                                                        "10px",
+                                                }}
+                                            >
+
+                                                <h3
+                                                    style={{
+                                                        marginTop:
+                                                            0,
+                                                    }}
+                                                >
+                                                    👥 Quyền đăng nhóm
+                                                </h3>
+
+                                                {/* ALL GROUPS */}
+
+                                                <label
+                                                    style={{
+                                                        display:
+                                                            "flex",
+                                                        alignItems:
+                                                            "center",
+                                                        gap:
+                                                            "10px",
+                                                        padding:
+                                                            "12px",
+                                                        background:
+                                                            "#fff",
+                                                        border:
+                                                            "1px solid #ddd",
+                                                        borderRadius:
+                                                            "8px",
+                                                        cursor:
+                                                            "pointer",
+                                                    }}
+                                                >
+
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={
+                                                            allowAllGroups
+                                                        }
+                                                        onChange={(
+                                                            e
+                                                        ) =>
+                                                            setAllowAllGroups(
+                                                                e
+                                                                    .target
+                                                                    .checked
+                                                            )
+                                                        }
+                                                    />
+
+                                                    <strong>
+                                                        🌐 Cho phép đăng tất cả các nhóm
+                                                    </strong>
+
+                                                </label>
+
+                                                <p
+                                                    style={{
+                                                        marginTop:
+                                                            "8px",
+                                                        color:
+                                                            "#666",
+                                                        fontSize:
+                                                            "14px",
+                                                    }}
+                                                >
+                                                    {allowAllGroups
+                                                        ? "Tài khoản này được đăng tất cả nhóm. Ông có thể bỏ tích những nhóm không muốn đăng."
+                                                        : "Tài khoản này chỉ được đăng những nhóm được tích bên dưới."}
+                                                </p>
+
+                                                {/* SEARCH */}
+
+                                                <div
+                                                    style={{
+                                                        marginTop:
+                                                            "14px",
+                                                    }}
+                                                >
+
+                                                    <input
+                                                        type="text"
+                                                        placeholder="🔍 Tìm nhóm..."
+                                                        value={
+                                                            groupSearch
+                                                        }
+                                                        onChange={(
+                                                            e
+                                                        ) =>
+                                                            setGroupSearch(
+                                                                e
+                                                                    .target
+                                                                    .value
+                                                            )
+                                                        }
+                                                        style={{
+                                                            width:
+                                                                "100%",
+                                                            boxSizing:
+                                                                "border-box",
+                                                            padding:
+                                                                "11px",
+                                                            border:
+                                                                "1px solid #ccc",
+                                                            borderRadius:
+                                                                "8px",
+                                                            fontSize:
+                                                                "15px",
+                                                        }}
+                                                    />
+
+                                                </div>
+
+                                                {/* GROUP LIST */}
+
+                                                <div
+                                                    style={{
+                                                        marginTop:
+                                                            "12px",
+                                                        maxHeight:
+                                                            "350px",
+                                                        overflowY:
+                                                            "auto",
+                                                    }}
+                                                >
+
+                                                    {groups.length ===
+                                                    0 ? (
+
+                                                        <p
+                                                            style={{
+                                                                color:
+                                                                    "#777",
+                                                            }}
+                                                        >
+                                                            📭 Chưa có hội nhóm nào.
+                                                        </p>
+
+                                                    ) : (
+
+                                                        getFilteredGroups().length ===
+                                                        0 ? (
+
+                                                            <p
+                                                                style={{
+                                                                    color:
+                                                                        "#777",
+                                                                }}
+                                                            >
+                                                                🔍 Không tìm thấy nhóm phù hợp.
+                                                            </p>
+
+                                                        ) : (
+
+                                                            getFilteredGroups().map(
+                                                                (
+                                                                    group
+                                                                ) => {
+
+                                                                    const groupId =
+                                                                        String(
+                                                                            group.id
+                                                                        );
+
+                                                                    const checked =
+                                                                        allowAllGroups
+                                                                            ? !excludedGroupIds.includes(
+                                                                                  groupId
+                                                                              )
+                                                                            : allowedGroupIds.includes(
+                                                                                  groupId
+                                                                              );
+
+                                                                    return (
+                                                                        <label
+                                                                            key={
+                                                                                group.id
+                                                                            }
+                                                                            style={{
+                                                                                display:
+                                                                                    "flex",
+                                                                                alignItems:
+                                                                                    "center",
+                                                                                gap:
+                                                                                    "10px",
+                                                                                padding:
+                                                                                    "10px",
+                                                                                marginBottom:
+                                                                                    "6px",
+                                                                                background:
+                                                                                    "#fff",
+                                                                                border:
+                                                                                    "1px solid #e5e5e5",
+                                                                                borderRadius:
+                                                                                    "8px",
+                                                                                cursor:
+                                                                                    "pointer",
+                                                                            }}
+                                                                        >
+
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={
+                                                                                    checked
+                                                                                }
+                                                                                onChange={() =>
+                                                                                    allowAllGroups
+                                                                                        ? handleToggleExcludedGroup(
+                                                                                              group.id
+                                                                                          )
+                                                                                        : handleToggleAllowedGroup(
+                                                                                              group.id
+                                                                                          )
+                                                                                }
+                                                                            />
+
+                                                                            <div
+                                                                                style={{
+                                                                                    flex:
+                                                                                        1,
+                                                                                }}
+                                                                            >
+
+                                                                                <strong>
+                                                                                    👥{" "}
+                                                                                    {
+                                                                                        group.name
+                                                                                    }
+                                                                                </strong>
+
+                                                                                {group.url && (
+                                                                                    <div
+                                                                                        style={{
+                                                                                            color:
+                                                                                                "#777",
+                                                                                            fontSize:
+                                                                                                "12px",
+                                                                                            marginTop:
+                                                                                                "3px",
+                                                                                        }}
+                                                                                    >
+                                                                                        {group.url}
+                                                                                    </div>
+                                                                                )}
+
+                                                                            </div>
+
+                                                                        </label>
+                                                                    );
+                                                                }
+                                                            )
+
+                                                        )
+                                                    )}
+
+                                                </div>
+
+                                                {/* EXCEPTION INFO */}
+
+                                                {allowAllGroups &&
+                                                    excludedGroupIds.length >
+                                                        0 && (
+
+                                                        <div
+                                                            style={{
+                                                                marginTop:
+                                                                    "10px",
+                                                                padding:
+                                                                    "10px",
+                                                                background:
+                                                                    "#fff3cd",
+                                                                border:
+                                                                    "1px solid #ffe69c",
+                                                                borderRadius:
+                                                                    "8px",
+                                                                fontSize:
+                                                                    "14px",
+                                                            }}
+                                                        >
+                                                            🚫 Đang loại trừ{" "}
+                                                            <strong>
+                                                                {
+                                                                    excludedGroupIds.length
+                                                                }
+                                                            </strong>{" "}
+                                                            nhóm.
+                                                        </div>
+
+                                                    )}
+
+                                                {/* ACTIONS */}
+
+                                                <div
+                                                    style={{
+                                                        display:
+                                                            "flex",
+                                                        gap:
+                                                            "8px",
+                                                        flexWrap:
+                                                            "wrap",
+                                                        marginTop:
+                                                            "14px",
+                                                    }}
+                                                >
+
+                                                    <PrimaryButton
+                                                        onClick={() =>
+                                                            handleSaveGroupPermissions(
+                                                                account
+                                                            )
+                                                        }
+                                                    >
+                                                        💾 Lưu quyền nhóm
+                                                    </PrimaryButton>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={
+                                                            closeGroupManager
+                                                        }
+                                                        style={{
+                                                            padding:
+                                                                "10px 16px",
+                                                            border:
+                                                                "1px solid #ccc",
+                                                            borderRadius:
+                                                                "8px",
+                                                            background:
+                                                                "#fff",
+                                                            cursor:
+                                                                "pointer",
+                                                        }}
+                                                    >
+                                                        Hủy
+                                                    </button>
+
+                                                </div>
+
+                                            </div>
+
                                         )}
 
-                                        <PrimaryButton
-                                            onClick={() =>
-                                                handleDelete(
-                                                    account.id,
-                                                    account.name
-                                                )
-                                            }
-                                        >
-                                            🗑️ Xóa
-                                        </PrimaryButton>
                                     </div>
-                                </div>
-                            )
+                                );
+                            }
                         )}
+
                     </div>
                 )}
+
             </SectionCard>
 
             {/* =========================
                 LƯU Ý
             ========================= */}
 
-            <SectionCard title="💡 Lưu ý">
+            <SectionCard
+                title="💡 Lưu ý"
+            >
                 <p>
                     Hệ thống hiện chỉ quản lý
-                    thông tin tài khoản Facebook.
+                    thông tin và quyền sử dụng
+                    tài khoản Facebook.
                 </p>
 
                 <p>
-                    🔐 <strong>
+                    🔐{" "}
+                    <strong>
                         Không lưu mật khẩu Facebook
                     </strong>{" "}
                     trong ToyotaSureHub.
                 </p>
 
                 <p>
-                    🚀 Phần kết nối tài khoản để
+                    🚀 Kết nối tài khoản để
                     đăng Facebook thật sẽ được
                     xây dựng ở bước Posting Engine
                     tiếp theo.
                 </p>
             </SectionCard>
+
         </main>
     );
 }

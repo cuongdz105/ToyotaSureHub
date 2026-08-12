@@ -1,187 +1,679 @@
 const QUEUE_KEY = "facebook_posting_queue";
 
+const ACCOUNTS_KEY = "toyota_fb_accounts";
+
+
+// ==========================================
+// CREATE QUEUE ID
+// ==========================================
+
 function createId() {
-  return `queue_${Date.now()}_${Math.random()
-    .toString(36)
-    .slice(2, 8)}`;
+    return `queue_${Date.now()}_${Math.random()
+        .toString(36)
+        .slice(2, 8)}`;
 }
+
+
+// ==========================================
+// LOAD ACCOUNTS
+// ==========================================
+
+function loadAccounts() {
+    const data =
+        localStorage.getItem(
+            ACCOUNTS_KEY
+        );
+
+    if (!data) {
+        return [];
+    }
+
+    try {
+        const accounts =
+            JSON.parse(data);
+
+        return Array.isArray(accounts)
+            ? accounts
+            : [];
+
+    } catch (error) {
+
+        console.error(
+            "Không đọc được Facebook Accounts:",
+            error
+        );
+
+        return [];
+    }
+}
+
+
+// ==========================================
+// KIỂM TRA ACCOUNT CÓ QUYỀN GROUP
+// ==========================================
+
+function isAccountAllowedForGroup(
+    account,
+    group
+) {
+    if (
+        !account ||
+        !group
+    ) {
+        return false;
+    }
+
+
+    // Account phải active
+
+    if (
+        account.status !==
+        "active"
+    ) {
+        return false;
+    }
+
+
+    const groupId =
+        String(group.id);
+
+
+    // ======================================
+    // MODE 1:
+    // CHO PHÉP TẤT CẢ NHÓM
+    // ======================================
+
+    if (
+        account.allowAllGroups === true
+    ) {
+
+        const excludedGroupIds =
+            Array.isArray(
+                account.excludedGroupIds
+            )
+                ? account.excludedGroupIds
+                : [];
+
+
+        const isExcluded =
+            excludedGroupIds.some(
+                (id) =>
+                    String(id) ===
+                    groupId
+            );
+
+
+        return !isExcluded;
+    }
+
+
+    // ======================================
+    // MODE 2:
+    // CHỈ NHÓM ĐƯỢC CHỌN
+    // ======================================
+
+    const allowedGroupIds =
+        Array.isArray(
+            account.allowedGroupIds
+        )
+            ? account.allowedGroupIds
+            : [];
+
+
+    return allowedGroupIds.some(
+        (id) =>
+            String(id) ===
+            groupId
+    );
+}
+
+
+// ==========================================
+// VALIDATE ACCOUNT POSTING PERMISSION
+// ==========================================
+
+function validateAccountPermission(
+    accountId,
+    group
+) {
+
+    if (!accountId) {
+
+        throw new Error(
+            "Chưa chọn tài khoản Facebook."
+        );
+
+    }
+
+
+    if (!group) {
+
+        throw new Error(
+            "Chưa chọn hội nhóm."
+        );
+
+    }
+
+
+    const accounts =
+        loadAccounts();
+
+
+    const account =
+        accounts.find(
+            (item) =>
+                String(item.id) ===
+                String(accountId)
+        );
+
+
+    if (!account) {
+
+        throw new Error(
+            `Không tìm thấy tài khoản Facebook với ID: ${accountId}`
+        );
+
+    }
+
+
+    if (
+        account.status !==
+        "active"
+    ) {
+
+        throw new Error(
+            `Tài khoản Facebook "${account.name}" hiện không hoạt động.`
+        );
+
+    }
+
+
+    const allowed =
+        isAccountAllowedForGroup(
+            account,
+            group
+        );
+
+
+    if (!allowed) {
+
+        throw new Error(
+            `Tài khoản "${account.name}" không được phép đăng vào nhóm "${group.name}".`
+        );
+
+    }
+
+
+    return account;
+}
+
+
+// ==========================================
+// LOAD QUEUE
+// ==========================================
 
 export function loadPostingQueue() {
-  const data = localStorage.getItem(QUEUE_KEY);
 
-  if (!data) return [];
+    const data =
+        localStorage.getItem(
+            QUEUE_KEY
+        );
 
-  try {
-    return JSON.parse(data);
-  } catch (error) {
-    console.error(
-      "Không đọc được Facebook Posting Queue:",
-      error
+
+    if (!data) {
+        return [];
+    }
+
+
+    try {
+
+        const queue =
+            JSON.parse(data);
+
+        return Array.isArray(queue)
+            ? queue
+            : [];
+
+    } catch (error) {
+
+        console.error(
+            "Không đọc được Facebook Posting Queue:",
+            error
+        );
+
+        return [];
+    }
+}
+
+
+// ==========================================
+// SAVE QUEUE
+// ==========================================
+
+export function savePostingQueue(
+    queue
+) {
+
+    localStorage.setItem(
+        QUEUE_KEY,
+        JSON.stringify(queue)
     );
-
-    return [];
-  }
 }
 
-export function savePostingQueue(queue) {
-  localStorage.setItem(
-    QUEUE_KEY,
-    JSON.stringify(queue)
-  );
-}
+
+// ==========================================
+// ADD TO QUEUE
+// ==========================================
 
 export function addToPostingQueue({
-  carId,
-  group,
-  content,
-  imageCount = 0,
-  accountId = null,
+    carId,
+    group,
+    content,
+    imageCount = 0,
+    accountId = null,
 }) {
-  if (!group) {
-    throw new Error("Chưa chọn hội nhóm.");
-  }
 
-  const queue = loadPostingQueue();
+    // ======================================
+    // BASIC VALIDATION
+    // ======================================
 
-  const job = {
-    id: createId(),
+    if (!group) {
 
-     logs: [
-    {
-      message: "📋 Bài đăng được thêm vào Queue",
-      timestamp: new Date().toISOString(),
-    },
-  ],
+        throw new Error(
+            "Chưa chọn hội nhóm."
+        );
 
-    carId: carId || null,
-    accountId: accountId || null,
+    }
 
-    group: {
-      id: group.id,
-      name: group.name,
-      url: group.url || "",
-      matchScore: group.matchScore || 0,
-    },
 
-    content: content?.trim() || "",
+    if (!content?.trim()) {
 
-    imageCount,
+        throw new Error(
+            "Nội dung Facebook đang trống."
+        );
 
-    status: "waiting",
+    }
 
-    error: null,
 
-    createdAt: new Date().toISOString(),
+    if (
+        !imageCount ||
+        imageCount <= 0
+    ) {
 
-    updatedAt: new Date().toISOString(),
-  };
+        throw new Error(
+            "Bài đăng chưa có ảnh."
+        );
 
-  const updatedQueue = [
-    ...queue,
-    job,
-  ];
+    }
 
-  savePostingQueue(updatedQueue);
 
-  return job;
+    // ======================================
+    // ACCOUNT PERMISSION CHECK
+    // ======================================
+
+    const account =
+        validateAccountPermission(
+            accountId,
+            group
+        );
+
+
+    // ======================================
+    // LOAD QUEUE
+    // ======================================
+
+    const queue =
+        loadPostingQueue();
+
+
+    // ======================================
+    // CREATE JOB
+    // ======================================
+
+    const now =
+        new Date().toISOString();
+
+
+    const job = {
+
+        id: createId(),
+
+
+        logs: [
+
+            {
+                message:
+                    "📋 Bài đăng được thêm vào Queue",
+
+                timestamp:
+                    now,
+            },
+
+            {
+                message:
+                    `👤 Tài khoản: ${account.name}`,
+
+                timestamp:
+                    now,
+            },
+
+            {
+                message:
+                    `👥 Nhóm: ${group.name}`,
+
+                timestamp:
+                    now,
+            },
+
+        ],
+
+
+        carId:
+            carId || null,
+
+
+        accountId:
+            Number(account.id),
+
+
+        account: {
+
+            id:
+                account.id,
+
+            name:
+                account.name,
+
+            status:
+                account.status,
+
+        },
+
+
+        group: {
+
+            id:
+                group.id,
+
+            name:
+                group.name,
+
+            url:
+                group.url || "",
+
+            matchScore:
+                group.matchScore || 0,
+
+        },
+
+
+        content:
+            content.trim(),
+
+
+        imageCount:
+            Number(imageCount),
+
+
+        status:
+            "waiting",
+
+
+        error:
+            null,
+
+
+        result:
+            null,
+
+
+        createdAt:
+            now,
+
+
+        updatedAt:
+            now,
+
+    };
+
+
+    // ======================================
+    // SAVE
+    // ======================================
+
+    const updatedQueue = [
+
+        ...queue,
+
+        job,
+
+    ];
+
+
+    savePostingQueue(
+        updatedQueue
+    );
+
+
+    console.log(
+        "✅ Queue Job Created:",
+        job
+    );
+
+
+    return job;
 }
+
+
+// ==========================================
+// UPDATE QUEUE JOB
+// ==========================================
 
 export function updateQueueJob(
-  jobId,
-  updates = {}
+    jobId,
+    updates = {}
 ) {
-  const queue = loadPostingQueue();
 
-  const updatedQueue = queue.map((job) => {
-    if (job.id !== jobId) {
-      return job;
-    }
+    const queue =
+        loadPostingQueue();
 
-    return {
-      ...job,
 
-      ...updates,
+    const updatedQueue =
+        queue.map((job) => {
 
-      updatedAt:
-        new Date().toISOString(),
-    };
-  });
+            if (
+                job.id !==
+                jobId
+            ) {
 
-  savePostingQueue(updatedQueue);
+                return job;
+            }
 
-  return updatedQueue.find(
-    (job) => job.id === jobId
-  );
+
+            return {
+
+                ...job,
+
+                ...updates,
+
+                updatedAt:
+                    new Date().toISOString(),
+
+            };
+
+        });
+
+
+    savePostingQueue(
+        updatedQueue
+    );
+
+
+    return updatedQueue.find(
+        (job) =>
+            job.id ===
+            jobId
+    );
 }
 
-export function addQueueLog(jobId, message) {
-  const queue = loadPostingQueue();
 
-  const updatedQueue = queue.map((job) => {
-    if (job.id !== jobId) {
-      return job;
-    }
+// ==========================================
+// ADD QUEUE LOG
+// ==========================================
 
-    const logs = Array.isArray(job.logs)
-      ? job.logs
-      : [];
+export function addQueueLog(
+    jobId,
+    message
+) {
 
-    return {
-      ...job,
+    const queue =
+        loadPostingQueue();
 
-      logs: [
-        ...logs,
-        {
-          message,
-          timestamp: new Date().toISOString(),
-        },
-      ],
 
-      updatedAt: new Date().toISOString(),
-    };
-  });
+    const updatedQueue =
+        queue.map((job) => {
 
-  savePostingQueue(updatedQueue);
+            if (
+                job.id !==
+                jobId
+            ) {
 
-  return updatedQueue.find(
-    (job) => job.id === jobId
-  );
+                return job;
+            }
+
+
+            const logs =
+                Array.isArray(
+                    job.logs
+                )
+                    ? job.logs
+                    : [];
+
+
+            return {
+
+                ...job,
+
+                logs: [
+
+                    ...logs,
+
+                    {
+
+                        message,
+
+                        timestamp:
+                            new Date().toISOString(),
+
+                    },
+
+                ],
+
+                updatedAt:
+                    new Date().toISOString(),
+
+            };
+
+        });
+
+
+    savePostingQueue(
+        updatedQueue
+    );
+
+
+    return updatedQueue.find(
+        (job) =>
+            job.id ===
+            jobId
+    );
 }
 
-export function removeQueueJob(jobId) {
-  const queue = loadPostingQueue();
 
-  const updatedQueue = queue.filter(
-    (job) => job.id !== jobId
-  );
+// ==========================================
+// REMOVE QUEUE JOB
+// ==========================================
 
-  savePostingQueue(updatedQueue);
+export function removeQueueJob(
+    jobId
+) {
+
+    const queue =
+        loadPostingQueue();
+
+
+    const updatedQueue =
+        queue.filter(
+            (job) =>
+                job.id !==
+                jobId
+        );
+
+
+    savePostingQueue(
+        updatedQueue
+    );
 }
+
+
+// ==========================================
+// CLEAR QUEUE
+// ==========================================
 
 export function clearPostingQueue() {
-  localStorage.removeItem(QUEUE_KEY);
+
+    localStorage.removeItem(
+        QUEUE_KEY
+    );
 }
 
+
+// ==========================================
+// QUEUE STATS
+// ==========================================
+
 export function getQueueStats() {
-  const queue = loadPostingQueue();
 
-  return {
-    total: queue.length,
+    const queue =
+        loadPostingQueue();
 
-    waiting: queue.filter(
-      (job) => job.status === "waiting"
-    ).length,
 
-    processing: queue.filter(
-      (job) => job.status === "processing"
-    ).length,
+    return {
 
-    success: queue.filter(
-      (job) => job.status === "success"
-    ).length,
+        total:
+            queue.length,
 
-    failed: queue.filter(
-      (job) => job.status === "failed"
-    ).length,
-  };
+
+        waiting:
+            queue.filter(
+                (job) =>
+                    job.status ===
+                    "waiting"
+            ).length,
+
+
+        processing:
+            queue.filter(
+                (job) =>
+                    job.status ===
+                    "processing"
+            ).length,
+
+
+        success:
+            queue.filter(
+                (job) =>
+                    job.status ===
+                    "success"
+            ).length,
+
+
+        failed:
+            queue.filter(
+                (job) =>
+                    job.status ===
+                    "failed"
+            ).length,
+
+    };
 }
