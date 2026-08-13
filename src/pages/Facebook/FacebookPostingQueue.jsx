@@ -22,11 +22,66 @@ import {
     getQueueFixAction,
 } from "../../services/facebookQueueErrorService";
 
+const CAR_STORAGE_KEY = "toyota_sure_hub_cars";
+
+function loadCars() {
+    try {
+        const data = localStorage.getItem(CAR_STORAGE_KEY);
+
+        if (!data) {
+            return [];
+        }
+
+        const cars = JSON.parse(data);
+
+        return Array.isArray(cars) ? cars : [];
+    } catch (error) {
+        console.error(
+            "Không đọc được danh sách xe:",
+            error
+        );
+
+        return [];
+    }
+}
+
+function formatOdo(odo) {
+    if (
+        odo === null ||
+        odo === undefined ||
+        odo === ""
+    ) {
+        return "";
+    }
+
+    if (
+        typeof odo === "string" &&
+        odo.toLowerCase().includes("vạn")
+    ) {
+        return odo;
+    }
+
+    const value = Number(odo);
+
+    if (Number.isNaN(value)) {
+        return String(odo);
+    }
+
+    const van = value / 10000;
+
+    return `${Number.isInteger(van)
+        ? van
+        : van.toFixed(1).replace(/\\.0$/, "")
+    } vạn km`;
+}
+
 function FacebookPostingQueue() {
 
     const navigate = useNavigate();
 
     const [queue, setQueue] = useState([]);
+
+    const [cars, setCars] = useState([]);
 
     const [stats, setStats] = useState({
         total: 0,
@@ -53,12 +108,29 @@ function FacebookPostingQueue() {
         setStats(
             getQueueStats()
         );
+
+        setCars(loadCars());
     }
 
 
     useEffect(() => {
         refresh();
     }, []);
+
+
+    // ==========================================
+    // TÌM XE THEO CAR ID
+    // ==========================================
+
+    function getCar(job) {
+        return (
+            cars.find(
+                (car) =>
+                    String(car.id) ===
+                    String(job.carId)
+            ) || null
+        );
+    }
 
 
     // ==========================================
@@ -1045,40 +1117,67 @@ function FacebookPostingQueue() {
 
                                         <div>
 
-                                            <h3
-                                                style={{
-                                                    marginTop:
-                                                        0,
+                                            {(() => {
+                                                const car = getCar(job);
 
-                                                    marginBottom:
-                                                        "6px",
-                                                }}
-                                            >
+                                                return (
+                                                    <>
+                                                        <h3
+                                                            style={{
+                                                                marginTop:
+                                                                    0,
 
-                                                #{index + 1}{" "}
+                                                                marginBottom:
+                                                                    "6px",
+                                                            }}
+                                                        >
+                                                            #{index + 1}{" "}
+                                                            {car ? (
+                                                                <>
+                                                                    🚗{" "}
+                                                                    <strong>
+                                                                        {car.brand || ""}{" "}
+                                                                        {car.model || ""}{" "}
+                                                                        {car.version || ""}{" "}
+                                                                        {car.year || ""}
+                                                                    </strong>
 
-                                                {
-                                                    job.group?.name ||
-                                                    "Không rõ nhóm"
-                                                }
+                                                                    {car.color
+                                                                        ? ` màu ${car.color}`
+                                                                        : ""}
 
-                                            </h3>
+                                                                    {car.odo !== undefined &&
+                                                                    car.odo !== null &&
+                                                                    car.odo !== ""
+                                                                        ? ` — ${formatOdo(car.odo)}`
+                                                                        : ""}
+                                                                </>
+                                                            ) : (
+                                                                `🚗 Không tìm thấy thông tin xe — Car ID: ${
+                                                                    job.carId || "-"
+                                                                }`
+                                                            )}
+                                                        </h3>
 
+                                                        <div
+                                                            style={{
+                                                                fontSize:
+                                                                    "13px",
 
-                                            <div
-                                                style={{
-                                                    fontSize:
-                                                        "13px",
-
-                                                    color:
-                                                        "#777",
-                                                }}
-                                            >
-
-                                                Job ID:{" "}
-                                                {job.id}
-
-                                            </div>
+                                                                color:
+                                                                    "#777",
+                                                            }}
+                                                        >
+                                                            Job ID:{" "}
+                                                            {job.id}
+                                                            {" · "}
+                                                            👥{" "}
+                                                            {job.group?.name ||
+                                                                "Không rõ nhóm"}
+                                                        </div>
+                                                    </>
+                                                );
+                                            })()}
 
                                         </div>
 
@@ -1104,56 +1203,63 @@ function FacebookPostingQueue() {
                                                 "12px",
 
                                             display:
-                                                "grid",
+                                                "flex",
 
-                                            gridTemplateColumns:
-                                                "repeat(auto-fit, minmax(220px, 1fr))",
+                                            alignItems:
+                                                "center",
 
                                             gap:
-                                                "8px",
+                                                "14px",
+
+                                            flexWrap:
+                                                "wrap",
+
+                                            fontSize:
+                                                "14px",
+
+                                            color:
+                                                "#666",
                                         }}
                                     >
 
                                         <div>
-                                            🚗 Car ID:{" "}
-                                            <strong>
-                                                {
-                                                    job.carId ||
-                                                    "-"
-                                                }
-                                            </strong>
-                                        </div>
-
-
-                                        <div>
-                                            👤 Account ID:{" "}
-                                            <strong>
-                                                {
+                                            👤{" "}
+                                            <strong
+                                                style={{
+                                                    color:
+                                                        "#444",
+                                                }}
+                                            >
+                                                {job.accountName ||
                                                     job.accountId ||
-                                                    "-"
-                                                }
+                                                    "Tài khoản không rõ"}
                                             </strong>
                                         </div>
 
 
                                         <div>
-                                            👥 Nhóm:{" "}
-                                            <strong>
-                                                {
-                                                    job.group?.name ||
-                                                    "-"
-                                                }
+                                            👥{" "}
+                                            <strong
+                                                style={{
+                                                    color:
+                                                        "#444",
+                                                }}
+                                            >
+                                                {job.group?.name ||
+                                                    "Không rõ nhóm"}
                                             </strong>
                                         </div>
 
 
                                         <div>
-                                            📷 Ảnh:{" "}
-                                            <strong>
-                                                {
-                                                    job.imageCount ||
-                                                    0
-                                                }
+                                            📷{" "}
+                                            <strong
+                                                style={{
+                                                    color:
+                                                        "#444",
+                                                }}
+                                            >
+                                                {job.imageCount || 0}
                                             </strong>
                                         </div>
 
@@ -1611,6 +1717,69 @@ function FacebookPostingQueue() {
                                         </PrimaryButton>
 
                                     </div>
+
+
+                                    {/* =========================
+                                        DEBUG INFO
+                                        ID vẫn giữ lại để kiểm tra
+                                        nhưng ẩn khỏi giao diện chính.
+                                    ========================= */}
+
+                                    <details
+                                        style={{
+                                            marginTop:
+                                                "10px",
+
+                                            fontSize:
+                                                "12px",
+
+                                            color:
+                                                "#888",
+                                        }}
+                                    >
+                                        <summary
+                                            style={{
+                                                cursor:
+                                                    "pointer",
+
+                                                userSelect:
+                                                    "none",
+                                            }}
+                                        >
+                                            🔎 Thông tin kỹ thuật
+                                        </summary>
+
+                                        <div
+                                            style={{
+                                                marginTop:
+                                                    "8px",
+
+                                                padding:
+                                                    "8px 10px",
+
+                                                background:
+                                                    "#f7f7f7",
+
+                                                border:
+                                                    "1px solid #e5e5e5",
+
+                                                borderRadius:
+                                                    "7px",
+
+                                                lineHeight:
+                                                    1.7,
+                                            }}
+                                        >
+                                            Car ID:{" "}
+                                            {job.carId || "-"}
+                                            {" · "}
+                                            Account ID:{" "}
+                                            {job.accountId || "-"}
+                                            {" · "}
+                                            Job ID:{" "}
+                                            {job.id}
+                                        </div>
+                                    </details>
 
                                 </div>
                             );
