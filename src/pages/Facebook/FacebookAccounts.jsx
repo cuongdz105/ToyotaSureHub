@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import SectionCard from "../../components/Common/SectionCard";
 import PrimaryButton from "../../components/Common/PrimaryButton";
@@ -16,6 +17,9 @@ import {
 } from "../../services/facebookGroupService";
 
 function FacebookAccounts() {
+    const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+
     const [accounts, setAccounts] =
         useState([]);
 
@@ -74,9 +78,74 @@ function FacebookAccounts() {
         setGroupSearch,
     ] = useState("");
 
+    // ==========================================
+    // GROUP ĐANG ĐƯỢC ĐÁNH DẤU TỪ QUEUE
+    // ==========================================
+    const [
+        focusedGroupId,
+        setFocusedGroupId,
+    ] = useState(null);
+
     useEffect(() => {
         refreshData();
     }, []);
+
+    // ==========================================
+    // MỞ ĐÚNG ACCOUNT / GROUP TỪ QUEUE
+    // ==========================================
+
+    useEffect(() => {
+
+        const accountId =
+            searchParams.get("accountId");
+
+        const groupId =
+            searchParams.get("groupId");
+
+        if (!accountId || accounts.length === 0) {
+            return;
+        }
+
+        const targetAccount =
+            accounts.find(
+                (account) =>
+                    String(account.id) ===
+                    String(accountId)
+            );
+
+        if (!targetAccount) {
+            return;
+        }
+
+        // Tự mở đúng Account
+        handleOpenGroupManager(
+            targetAccount
+        );
+
+        if (groupId) {
+            setFocusedGroupId(
+                String(groupId)
+            );
+
+            setGroupSearch("");
+
+            // Cuộn tới đúng Group sau khi UI render
+            setTimeout(() => {
+                const element =
+                    document.getElementById(
+                        `facebook-group-${groupId}`
+                    );
+
+                if (element) {
+                    element.scrollIntoView({
+                        behavior: "smooth",
+                        block: "center",
+                    });
+                }
+            }, 150);
+        }
+
+    }, [accounts, searchParams]);
 
     function refreshData() {
         setAccounts(
@@ -329,6 +398,23 @@ function FacebookAccounts() {
         alert(
             "✅ Đã lưu quyền đăng nhóm cho tài khoản."
         );
+
+        // Nếu được mở từ Queue Error Handler,
+        // quay thẳng về Queue sau khi sửa xong.
+        const returnTo =
+            searchParams.get("returnTo");
+
+        const jobId =
+            searchParams.get("jobId");
+
+        if (returnTo === "queue") {
+            const queueUrl =
+                jobId
+                    ? `/facebook/queue?focusJobId=${encodeURIComponent(jobId)}`
+                    : "/facebook/queue";
+
+            navigate(queueUrl);
+        }
     }
 
     /*
@@ -919,6 +1005,21 @@ function FacebookAccounts() {
                                                         : "Tài khoản này chỉ được đăng những nhóm được tích bên dưới."}
                                                 </p>
 
+                                                {focusedGroupId && (
+                                                    <div
+                                                        style={{
+                                                            marginTop: "12px",
+                                                            padding: "10px 12px",
+                                                            background: "#fff3cd",
+                                                            border: "1px solid #ffe69c",
+                                                            borderRadius: "8px",
+                                                            fontSize: "14px",
+                                                        }}
+                                                    >
+                                                        🎯 Đang xử lý lỗi từ Queue: Group được đánh dấu màu vàng bên dưới.
+                                                    </div>
+                                                )}
+
                                                 {/* SEARCH */}
 
                                                 <div
@@ -1023,6 +1124,7 @@ function FacebookAccounts() {
 
                                                                     return (
                                                                         <label
+                                                                            id={`facebook-group-${group.id}`}
                                                                             key={
                                                                                 group.id
                                                                             }
@@ -1043,8 +1145,16 @@ function FacebookAccounts() {
                                                                                     "1px solid #e5e5e5",
                                                                                 borderRadius:
                                                                                     "8px",
-                                                                                cursor:
+                                                                                                                                                                cursor:
                                                                                     "pointer",
+                                                                                background:
+                                                                                    focusedGroupId === String(group.id)
+                                                                                        ? "#fff3cd"
+                                                                                        : "#fff",
+                                                                                border:
+                                                                                    focusedGroupId === String(group.id)
+                                                                                        ? "2px solid #ff9800"
+                                                                                        : "1px solid #e5e5e5",
                                                                             }}
                                                                         >
 
@@ -1152,6 +1262,22 @@ function FacebookAccounts() {
                                                             "14px",
                                                     }}
                                                 >
+
+                                                    {searchParams.get("returnTo") === "queue" && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => navigate("/facebook/queue")}
+                                                            style={{
+                                                                padding: "10px 16px",
+                                                                border: "1px solid #ccc",
+                                                                borderRadius: "8px",
+                                                                background: "#fff",
+                                                                cursor: "pointer",
+                                                            }}
+                                                        >
+                                                            ↩️ Quay lại Queue
+                                                        </button>
+                                                    )}
 
                                                     <PrimaryButton
                                                         onClick={() =>

@@ -1,487 +1,1092 @@
 import {
-  loadPostingQueue,
-  updateQueueJob,
-  addQueueLog,
+    loadPostingQueue,
+    updateQueueJob,
+    addQueueLog,
 } from "./facebookPostingQueueService";
 
 import {
-  runFacebookPostingEngine,
+    runFacebookPostingEngine,
 } from "./facebookPostingEngine";
 
+import {
+    loadAccounts,
+} from "./facebookAccountService";
+
+import {
+    getRateControllerConfig,
+    getBatchSize,
+    waitBetweenJobs,
+    waitBetweenBatches,
+} from "./facebookRateControllerService";
+
 /**
- * ==========================================
+ * =======================================
  * FACEBOOK POSTING WORKER
- * ==========================================
+ * =======================================
  *
  * Nhiệm vụ:
  *
- * 1. Đọc Queue
- * 2. Lấy Job WAITING
- * 3. Kiểm tra dữ liệu Job
- * 4. Chuyển Job -> PROCESSING
- * 5. Gọi Facebook Posting Engine
- * 6. Nhận kết quả từ Engine
- * 7. Ghi Log
- * 8. Chuyển Job -> SUCCESS / FAILED
+ * - Đọc Facebook Posting Queue
+ * - Kiểm tra Account
+ * - Kiểm tra quyền Account -> Group
+ * - Chuyển Job sang PROCESSING
+ * - Gọi Facebook Posting Engine
+ * - Ghi Log
+ * - Cập nhật SUCCESS / FAILED
+ * - Retry Job lỗi
+ * - Xử lý Queue tuần tự
+ * - Rate Controller điều phối tốc độ
  *
- * Hiện tại:
- * - Posting Engine = SIMULATION
- * - Chưa đăng Facebook thật
+ * Posting Engine hiện tại:
  *
- * Sau này:
- * - Posting Engine có thể dùng Facebook API
- * - Worker không cần viết lại
+ * SIMULATION MODE
  *
- * ==========================================
+ * Chưa đăng Facebook thật.
  */
 
 
 /**
- * ==========================================
- * XỬ LÝ 1 JOB
- * ==========================================
+ * =======================================
+ * CẤU HÌNH RETRY
+ * =======================================
+ *
+ * Mỗi Job được phép retry tối đa 2 lần.
+ *
+ * Ví dụ:
+ *
+ * Lần đầu
+ *   ↓
+ * ❌ lỗi
+ *   ↓
+ * Retry 1/2
+ *
+ *   ↓
+ * ❌ lỗi
+ *   ↓
+ * Retry 2/2
+ *
+ *   ↓
+ * ❌ lỗi tiếp
+ *   ↓
+ * FAILED
  */
-export async function processFacebookJob(jobId) {
-  console.log("=================================");
-  console.log("🚀 BẮT ĐẦU FACEBOOK WORKER");
-  console.log("Job ID:", jobId);
 
-  /**
-   * ----------------------------------------
-   * 1. Đọc Queue mới nhất
-   * ----------------------------------------
-   */
-  const queue = loadPostingQueue();
+const MAX_RETRIES = 2;
 
-  const job = queue.find(
-    (item) => item.id === jobId
-  );
 
-  if (!job) {
-    throw new Error(
-      "Không tìm thấy bài đăng trong Queue."
+/**
+ * =======================================
+ * TÌM FACEBOOK ACCOUNT
+ * =======================================
+ */
+
+function findAccount(accountId) {
+
+    const accounts =
+        loadAccounts();
+
+    return (
+        accounts.find(
+            (account) =>
+                String(
+                    account.id
+                ) ===
+                String(
+                    accountId
+                )
+        ) || null
     );
-  }
-
-  console.log("📦 Job:", job);
-
-  /**
-   * ----------------------------------------
-   * 2. Kiểm tra trạng thái
-   * ----------------------------------------
-   */
-  if (job.status !== "waiting") {
-    throw new Error(
-      `Job hiện đang ở trạng thái "${job.status}".`
-    );
-  }
-
-  /**
-   * ----------------------------------------
-   * 3. Log bắt đầu
-   * ----------------------------------------
-   */
-  addQueueLog(
-    jobId,
-    "🚀 Bắt đầu xử lý bài đăng"
-  );
-
-  /**
-   * ----------------------------------------
-   * 4. Chuyển sang PROCESSING
-   * ----------------------------------------
-   */
-  updateQueueJob(jobId, {
-    status: "processing",
-    error: null,
-  });
-
-  console.log(
-    "🔵 Trạng thái: PROCESSING"
-  );
-
-  addQueueLog(
-    jobId,
-    "🔵 Chuyển trạng thái sang PROCESSING"
-  );
-
-  try {
-    /**
-     * --------------------------------------
-     * 5. Gọi Facebook Posting Engine
-     * --------------------------------------
-     */
-
-    console.log(
-      "🚀 Gọi Facebook Posting Engine..."
-    );
-
-    addQueueLog(
-      jobId,
-      "🚀 Gọi Facebook Posting Engine"
-    );
-
-    const result =
-      await runFacebookPostingEngine(job);
-
-    console.log(
-      "📦 Posting Engine Result:",
-      result
-    );
-
-    /**
-     * --------------------------------------
-     * 6. Ghi Log từ Posting Engine
-     * --------------------------------------
-     */
-
-    if (
-      Array.isArray(result?.logs)
-    ) {
-      for (const log of result.logs) {
-        if (!log?.message) {
-          continue;
-        }
-
-        addQueueLog(
-          jobId,
-          log.message
-        );
-      }
-    }
-
-    /**
-     * --------------------------------------
-     * 7. Kiểm tra kết quả
-     * --------------------------------------
-     */
-
-    if (!result?.success) {
-      throw new Error(
-        "Posting Engine không trả về kết quả thành công."
-      );
-    }
-
-    /**
-     * --------------------------------------
-     * 8. Thành công
-     * --------------------------------------
-     */
-
-    const finalResult =
-      updateQueueJob(
-        jobId,
-        {
-          status: "success",
-
-          error: null,
-
-          result: {
-            ...result,
-
-            mode:
-              result.mode ||
-              "simulation",
-
-            published:
-              result.published === true,
-
-            completedAt:
-              result.completedAt ||
-              new Date().toISOString(),
-          },
-        }
-      );
-
-    console.log(
-      "🟢 FACEBOOK WORKER SUCCESS"
-    );
-
-    console.log(
-      "Result:",
-      finalResult
-    );
-
-    /**
-     * --------------------------------------
-     * 9. Log kết quả cuối
-     * --------------------------------------
-     */
-
-    if (
-      result.published === true
-    ) {
-      addQueueLog(
-        jobId,
-        "🟢 Đã đăng Facebook thật thành công"
-      );
-    } else {
-      addQueueLog(
-        jobId,
-        "🟡 Hoàn tất mô phỏng — chưa đăng Facebook thật"
-      );
-    }
-
-    console.log(
-      "================================="
-    );
-
-    return finalResult;
-
-  } catch (error) {
-
-    /**
-     * --------------------------------------
-     * 10. XỬ LÝ LỖI
-     * --------------------------------------
-     */
-
-    console.error(
-      "❌ FACEBOOK WORKER ERROR:",
-      error
-    );
-
-    const errorMessage =
-      error?.message ||
-      "Lỗi không xác định.";
-
-    addQueueLog(
-      jobId,
-      `🔴 Worker thất bại: ${errorMessage}`
-    );
-
-    /**
-     * --------------------------------------
-     * 11. Chuyển Job -> FAILED
-     * --------------------------------------
-     */
-
-    const failedResult =
-      updateQueueJob(
-        jobId,
-        {
-          status: "failed",
-
-          error: errorMessage,
-
-          result: {
-            mode: "simulation",
-
-            published: false,
-
-            failedAt:
-              new Date().toISOString(),
-          },
-        }
-      );
-
-    console.log(
-      "🔴 FACEBOOK WORKER FAILED"
-    );
-
-    console.log(
-      "Error:",
-      errorMessage
-    );
-
-    console.log(
-      "================================="
-    );
-
-    /**
-     * Quan trọng:
-     *
-     * Ném lỗi trở lại cho UI hoặc
-     * processFacebookQueue xử lý tiếp.
-     */
-    throw error;
-  }
 }
 
 
 /**
- * ==========================================
- * XỬ LÝ TOÀN BỘ QUEUE
- * ==========================================
- *
- * Chỉ xử lý các Job đang:
- *
- * status === "waiting"
- *
- * Các Job:
- * - success
- * - failed
- * - processing
- *
- * sẽ không bị chạy lại.
- *
- * Xử lý tuần tự:
- *
- * Job 1
- * ↓
- * hoàn tất
- * ↓
- * Job 2
- * ↓
- * hoàn tất
- * ↓
- * Job 3
- *
- * Điều này rất quan trọng khi sau này
- * đăng Facebook thật để tránh gửi quá
- * nhiều request cùng lúc.
- *
- * ==========================================
+ * =======================================
+ * KIỂM TRA ACCOUNT CÓ ĐƯỢC PHÉP GROUP
+ * =======================================
  */
-export async function processFacebookQueue() {
-  console.log(
-    "🚀 BẮT ĐẦU XỬ LÝ TOÀN BỘ QUEUE"
-  );
 
-  /**
-   * ----------------------------------------
-   * 1. Đọc Queue mới nhất
-   * ----------------------------------------
-   */
-  const queue =
-    loadPostingQueue();
+function isAccountAllowedForGroup(
+    account,
+    group
+) {
 
-  /**
-   * ----------------------------------------
-   * 2. Chỉ lấy Job WAITING
-   * ----------------------------------------
-   */
-  const waitingJobs =
-    queue.filter(
-      (job) =>
-        job.status === "waiting"
+    if (
+        !account ||
+        !group
+    ) {
+
+        return false;
+    }
+
+
+    /**
+     * Account bắt buộc phải active.
+     */
+
+    if (
+        account.status !==
+        "active"
+    ) {
+
+        return false;
+    }
+
+
+    const groupId =
+        String(
+            group.id
+        );
+
+
+    /**
+     * ===================================
+     * MODE 1
+     *
+     * Account được phép tất cả Group
+     * trừ những Group bị loại.
+     * ===================================
+     */
+
+    if (
+        account.allowAllGroups !==
+        false
+    ) {
+
+        const excludedGroupIds =
+            Array.isArray(
+                account.excludedGroupIds
+            )
+                ? account.excludedGroupIds
+                : [];
+
+
+        return !excludedGroupIds.some(
+            (id) =>
+                String(id) ===
+                groupId
+        );
+    }
+
+
+    /**
+     * ===================================
+     * MODE 2
+     *
+     * Account chỉ được phép các Group
+     * được chọn.
+     * ===================================
+     */
+
+    const allowedGroupIds =
+        Array.isArray(
+            account.allowedGroupIds
+        )
+            ? account.allowedGroupIds
+            : [];
+
+
+    return allowedGroupIds.some(
+        (id) =>
+            String(id) ===
+            groupId
     );
+}
 
-  console.log(
-    `📦 Có ${waitingJobs.length} bài đang chờ`
-  );
 
-  const results = [];
+/**
+ * =======================================
+ * VALIDATE ACCOUNT + GROUP
+ * =======================================
+ */
 
-  /**
-   * ----------------------------------------
-   * 3. Không có Job
-   * ----------------------------------------
-   */
-  if (
-    waitingJobs.length === 0
-  ) {
+function validateJobAccountAndGroup(
+    job
+) {
+
+    if (
+        !job?.accountId
+    ) {
+
+        throw new Error(
+            "Job chưa có tài khoản Facebook."
+        );
+    }
+
+
+    if (
+        !job?.group?.id
+    ) {
+
+        throw new Error(
+            "Job chưa có ID hội nhóm Facebook."
+        );
+    }
+
+
+    const account =
+        findAccount(
+            job.accountId
+        );
+
+
+    /**
+     * Account không tồn tại
+     */
+
+    if (!account) {
+
+        throw new Error(
+            `Không tìm thấy tài khoản Facebook ID ${job.accountId}.`
+        );
+    }
+
+
+    /**
+     * Account không active
+     */
+
+    if (
+        account.status !==
+        "active"
+    ) {
+
+        throw new Error(
+            `Tài khoản "${account.name}" hiện không hoạt động.`
+        );
+    }
+
+
+    /**
+     * Account không có quyền Group
+     */
+
+    if (
+        !isAccountAllowedForGroup(
+            account,
+            job.group
+        )
+    ) {
+
+        throw new Error(
+            `Tài khoản "${account.name}" không được phép đăng vào nhóm "${job.group.name || "Không rõ"}".`
+        );
+    }
+
+
+    return account;
+}
+
+
+/**
+ * =======================================
+ * RETRY HELPERS
+ * =======================================
+ */
+
+function getRetryCount(
+    job
+) {
+
+    const value =
+        Number(
+            job?.retryCount
+        );
+
+
+    if (
+        Number.isFinite(
+            value
+        ) &&
+        value >= 0
+    ) {
+
+        return value;
+    }
+
+
+    return 0;
+}
+
+
+function canRetry(
+    job
+) {
+
+    return (
+        getRetryCount(job) <
+        MAX_RETRIES
+    );
+}
+
+
+function getNextRetryCount(
+    job
+) {
+
+    return (
+        getRetryCount(job) +
+        1
+    );
+}
+
+
+/**
+ * =======================================
+ * XỬ LÝ 1 FACEBOOK JOB
+ * =======================================
+ */
+
+export async function processFacebookJob(
+    jobId
+) {
+
     console.log(
-      "📭 Không có bài đăng nào đang chờ."
+        "================================="
     );
 
-    return results;
-  }
-
-  /**
-   * ----------------------------------------
-   * 4. Xử lý tuần tự
-   * ----------------------------------------
-   */
-  for (
-    const job of waitingJobs
-  ) {
 
     console.log(
-      "---------------------------------"
+        "🚀 BẮT ĐẦU FACEBOOK WORKER"
     );
 
+
     console.log(
-      "🚀 Đang xử lý Job:",
-      job.id
+        "Job ID:",
+        jobId
     );
+
+
+    /**
+     * ===================================
+     * 1. Đọc Queue
+     * ===================================
+     */
+
+    const queue =
+        loadPostingQueue();
+
+
+    const job =
+        queue.find(
+            (item) =>
+                item.id ===
+                jobId
+        );
+
+
+    if (!job) {
+
+        throw new Error(
+            "Không tìm thấy bài đăng trong Queue."
+        );
+    }
+
+
+    console.log(
+        "📦 Job:",
+        job
+    );
+
+
+    /**
+     * ===================================
+     * 2. Kiểm tra trạng thái
+     * ===================================
+     */
+
+    if (
+        job.status !==
+        "waiting"
+    ) {
+
+        throw new Error(
+            `Job hiện đang ở trạng thái "${job.status}".`
+        );
+    }
+
+
+    addQueueLog(
+        jobId,
+        "🚀 Bắt đầu xử lý bài đăng"
+    );
+
+
+    /**
+     * ===================================
+     * 3. Kiểm tra ACCOUNT + GROUP
+     * ===================================
+     */
+
+    let account;
+
 
     try {
 
-      const result =
-        await processFacebookJob(
-          job.id
+        account =
+            validateJobAccountAndGroup(
+                job
+            );
+
+
+        addQueueLog(
+            jobId,
+            `👤 Account hợp lệ: ${account.name}`
         );
 
-      results.push(
-        result
-      );
+
+        addQueueLog(
+            jobId,
+            `👥 Account được phép đăng vào nhóm: ${job.group.name || "Không rõ"}`
+        );
 
     } catch (error) {
 
-      console.error(
-        `❌ Job ${job.id} thất bại:`,
-        error
-      );
+        const message =
+            error?.message ||
+            "Kiểm tra Account/Group thất bại.";
 
-      /**
-       * Job đã được processFacebookJob
-       * chuyển thành FAILED rồi.
-       *
-       * Ở đây chỉ trả kết quả về cho UI.
-       */
 
-      const failedJob =
-        loadPostingQueue().find(
-          (item) =>
-            item.id === job.id
+        addQueueLog(
+            jobId,
+            `🛑 Không thể chạy Job: ${message}`
         );
 
-      results.push(
-        failedJob || {
-          id: job.id,
 
-          status: "failed",
+        updateQueueJob(
+            jobId,
+            {
 
-          error:
-            error?.message ||
-            "Lỗi không xác định.",
-        }
-      );
+                status:
+                    "failed",
+
+                error:
+                    message,
+
+                result: {
+
+                    mode:
+                        "validation",
+
+                    published:
+                        false,
+
+                    failedAt:
+                        new Date().toISOString(),
+                },
+            }
+        );
+
+
+        throw error;
     }
-  }
 
-  /**
-   * ----------------------------------------
-   * 5. Hoàn tất Queue
-   * ----------------------------------------
-   */
 
-  console.log(
-    "================================="
-  );
+    /**
+     * ===================================
+     * 4. PROCESSING
+     * ===================================
+     */
 
-  console.log(
-    "🟢 ĐÃ XỬ LÝ XONG QUEUE"
-  );
+    updateQueueJob(
+        jobId,
+        {
 
-  console.log(
-    `📦 Tổng Job: ${waitingJobs.length}`
-  );
+            status:
+                "processing",
 
-  console.log(
-    `🟢 Thành công: ${
-      results.filter(
-        (item) =>
-          item?.status ===
-          "success"
-      ).length
-    }`
-  );
+            error:
+                null,
+        }
+    );
 
-  console.log(
-    `🔴 Thất bại: ${
-      results.filter(
-        (item) =>
-          item?.status ===
-          "failed"
-      ).length
-    }`
-  );
 
-  console.log(
-    "================================="
-  );
+    addQueueLog(
+        jobId,
+        "🔵 Chuyển trạng thái sang PROCESSING"
+    );
 
-  return results;
+
+    try {
+
+        /**
+         * ===============================
+         * 5. Gọi Posting Engine
+         * ===============================
+         */
+
+        console.log(
+            "🚀 Gọi Facebook Posting Engine..."
+        );
+
+
+        addQueueLog(
+            jobId,
+            "🚀 Gọi Facebook Posting Engine"
+        );
+
+
+        const result =
+            await runFacebookPostingEngine(
+                job
+            );
+
+
+        console.log(
+            "📦 Posting Engine Result:",
+            result
+        );
+
+
+        /**
+         * ===============================
+         * 6. Ghi Log từ Engine
+         * ===============================
+         */
+
+        if (
+            Array.isArray(
+                result?.logs
+            )
+        ) {
+
+            for (
+                const log of result.logs
+            ) {
+
+                if (
+                    !log?.message
+                ) {
+
+                    continue;
+                }
+
+
+                addQueueLog(
+                    jobId,
+                    log.message
+                );
+            }
+        }
+
+
+        /**
+         * ===============================
+         * 7. Kiểm tra kết quả
+         * ===============================
+         */
+
+        if (
+            !result?.success
+        ) {
+
+            throw new Error(
+                "Posting Engine không trả về kết quả thành công."
+            );
+        }
+
+
+        /**
+         * ===============================
+         * 8. SUCCESS
+         * ===============================
+         */
+
+        const finalResult =
+            updateQueueJob(
+                jobId,
+                {
+
+                    status:
+                        "success",
+
+                    error:
+                        null,
+
+                    retryCount:
+                        getRetryCount(
+                            job
+                        ),
+
+                    result: {
+
+                        ...result,
+
+                        mode:
+                            result.mode ||
+                            "simulation",
+
+                        published:
+                            result.published ===
+                            true,
+
+                        completedAt:
+                            result.completedAt ||
+                            new Date().toISOString(),
+                    },
+                }
+            );
+
+
+        addQueueLog(
+            jobId,
+
+            result.published === true
+                ? "🟢 Đã đăng Facebook thật thành công"
+                : "🟡 Hoàn tất mô phỏng — chưa đăng Facebook thật"
+        );
+
+
+        console.log(
+            "🟢 FACEBOOK WORKER SUCCESS"
+        );
+
+
+        console.log(
+            "Result:",
+            finalResult
+        );
+
+
+        console.log(
+            "================================="
+        );
+
+
+        return finalResult;
+
+    } catch (error) {
+
+        /**
+         * ===============================
+         * 9. XỬ LÝ ERROR
+         * ===============================
+         */
+
+        const errorMessage =
+            error?.message ||
+            "Lỗi không xác định.";
+
+
+        const currentRetry =
+            getRetryCount(
+                job
+            );
+
+
+        const retryAllowed =
+            canRetry(
+                job
+            );
+
+
+        console.error(
+            "❌ FACEBOOK WORKER ERROR:",
+            error
+        );
+
+
+        addQueueLog(
+            jobId,
+
+            `🔴 Worker thất bại: ${errorMessage}`
+        );
+
+
+        /**
+         * ===============================
+         * 10. RETRY
+         * ===============================
+         */
+
+        if (
+            retryAllowed
+        ) {
+
+            const nextRetry =
+                getNextRetryCount(
+                    job
+                );
+
+
+            updateQueueJob(
+                jobId,
+                {
+
+                    /**
+                     * Đưa Job trở lại
+                     * WAITING.
+                     */
+
+                    status:
+                        "waiting",
+
+                    error:
+                        errorMessage,
+
+                    retryCount:
+                        nextRetry,
+
+                    result: {
+
+                        mode:
+                            "simulation",
+
+                        published:
+                            false,
+
+                        lastFailedAt:
+                            new Date().toISOString(),
+                    },
+                }
+            );
+
+
+            addQueueLog(
+                jobId,
+
+                `🔄 Job được đưa lại WAITING để thử lại (${nextRetry}/${MAX_RETRIES})`
+            );
+
+
+            console.warn(
+                `🔄 Job ${jobId} sẽ retry ${nextRetry}/${MAX_RETRIES}`
+            );
+
+
+            throw error;
+        }
+
+
+        /**
+         * ===============================
+         * 11. HẾT RETRY
+         * ===============================
+         */
+
+        updateQueueJob(
+            jobId,
+            {
+
+                status:
+                    "failed",
+
+                error:
+                    errorMessage,
+
+                retryCount:
+                    currentRetry,
+
+                result: {
+
+                    mode:
+                        "simulation",
+
+                    published:
+                        false,
+
+                    failedAt:
+                        new Date().toISOString(),
+
+                    retriesExhausted:
+                        true,
+                },
+            }
+        );
+
+
+        addQueueLog(
+            jobId,
+
+            `⛔ Đã hết ${MAX_RETRIES} lần retry — Job chuyển FAILED`
+        );
+
+
+        console.error(
+            "🔴 FACEBOOK WORKER FAILED"
+        );
+
+
+        console.error(
+            "Error:",
+            errorMessage
+        );
+
+
+        console.log(
+            "================================="
+        );
+
+
+        throw error;
+    }
+}
+
+
+/**
+ * =======================================
+ * XỬ LÝ TOÀN BỘ QUEUE
+ * =======================================
+ *
+ * QUAN TRỌNG:
+ *
+ * Không dùng Promise.all().
+ *
+ * Job chạy tuần tự:
+ *
+ * Job 1
+ * ↓
+ * chờ Rate Controller
+ * ↓
+ * Job 2
+ * ↓
+ * chờ
+ * ↓
+ * Job 3
+ *
+ * Sau mỗi Batch sẽ nghỉ.
+ */
+
+export async function processFacebookQueue() {
+
+    console.log(
+        "🚀 BẮT ĐẦU XỬ LÝ TOÀN BỘ QUEUE"
+    );
+
+
+    /**
+     * ===================================
+     * 1. Đọc Queue
+     * ===================================
+     */
+
+    const queue =
+        loadPostingQueue();
+
+
+    /**
+     * Chỉ lấy Job đang WAITING
+     */
+
+    const waitingJobs =
+        queue.filter(
+            (job) =>
+                job.status ===
+                "waiting"
+        );
+
+
+    /**
+     * ===================================
+     * 2. Rate Controller
+     * ===================================
+     */
+
+    const config =
+        getRateControllerConfig();
+
+
+    const batchSize =
+        getBatchSize();
+
+
+    console.log(
+        `📦 Có ${waitingJobs.length} bài đang chờ`
+    );
+
+
+    console.log(
+        "⚙️ Rate Controller:",
+        config
+    );
+
+
+    console.log(
+        `📦 Batch size: ${batchSize}`
+    );
+
+
+    const results = [];
+
+
+    /**
+     * ===================================
+     * 3. XỬ LÝ TUẦN TỰ
+     * ===================================
+     */
+
+    for (
+        let index = 0;
+        index < waitingJobs.length;
+        index += 1
+    ) {
+
+        const job =
+            waitingJobs[index];
+
+
+        /**
+         * ===============================
+         * Chờ giữa các Job
+         * ===============================
+         *
+         * Job đầu tiên chạy ngay.
+         */
+
+        if (
+            index > 0
+        ) {
+
+            addQueueLog(
+                job.id,
+
+                "⏱️ Rate Controller: chờ trước khi xử lý Job tiếp theo"
+            );
+
+
+            await waitBetweenJobs({
+
+                simulation:
+                    true,
+            });
+        }
+
+
+        /**
+         * ===============================
+         * Xử lý Job
+         * ===============================
+         */
+
+        try {
+
+            const result =
+                await processFacebookJob(
+                    job.id
+                );
+
+
+            results.push(
+                result
+            );
+
+        } catch (error) {
+
+            console.error(
+                `❌ Job ${job.id} thất bại:`,
+                error
+            );
+
+
+            /**
+             * Đọc lại Job mới nhất.
+             *
+             * Nếu Job vừa được retry,
+             * status lúc này sẽ là WAITING.
+             */
+
+            const latestJob =
+                loadPostingQueue().find(
+                    (item) =>
+                        item.id ===
+                        job.id
+                );
+
+
+            results.push(
+                latestJob || {
+
+                    id:
+                        job.id,
+
+                    status:
+                        "failed",
+
+                    error:
+                        error?.message ||
+                        "Lỗi không xác định.",
+                }
+            );
+        }
+
+
+        /**
+         * ===============================
+         * Kiểm tra Batch
+         * ===============================
+         */
+
+        const completedCount =
+            index + 1;
+
+
+        const isBatchEnd =
+            completedCount %
+                batchSize ===
+            0;
+
+
+        const hasMoreJobs =
+            index <
+            waitingJobs.length - 1;
+
+
+        /**
+         * ===============================
+         * Nghỉ giữa Batch
+         * ===============================
+         */
+
+        if (
+            isBatchEnd &&
+            hasMoreJobs
+        ) {
+
+            const nextJob =
+                waitingJobs[
+                    index + 1
+                ];
+
+
+            addQueueLog(
+                nextJob.id,
+
+                "⏸️ Rate Controller: nghỉ giữa các batch"
+            );
+
+
+            await waitBetweenBatches();
+        }
+    }
+
+
+    /**
+     * ===================================
+     * 4. Hoàn tất
+     * ===================================
+     */
+
+    console.log(
+        "🟢 ĐÃ XỬ LÝ XONG QUEUE"
+    );
+
+
+    return results;
+}
+
+
+/**
+ * =======================================
+ * GET MAX RETRIES
+ * =======================================
+ *
+ * Dùng sau này cho UI:
+ *
+ * Retry 0/2
+ * Retry 1/2
+ * Retry 2/2
+ */
+
+export function getMaxRetries() {
+
+    return MAX_RETRIES;
 }

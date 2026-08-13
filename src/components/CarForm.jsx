@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 
 import { addCar, updateCar } from "../services/carService";
@@ -12,6 +13,7 @@ import ImageUploader from "./ImageUploader";
 
 function CarForm({ editCar }) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [car, setCar] = useState(
   editCar || {
@@ -64,33 +66,58 @@ function CarForm({ editCar }) {
   }
 
   function handleSave() {
-    if (!car.brand) {
-      alert("Chọn hãng xe");
-      return;
-    }
-
-    if (!car.model) {
-      alert("Chọn dòng xe");
-      return;
-    }
-
-    if (!car.version) {
-      alert("Chọn phiên bản");
-      return;
-    }
-
-   if (editCar) {
-  updateCar(car.id, car);
-
-  alert("✅ Đã cập nhật xe");
-} else {
-  addCar(car);
-
-  alert("✅ Đã thêm xe");
-}
-
-navigate("/cars");
+  if (!car.brand) {
+    alert("Chọn hãng xe");
+    return;
   }
+
+  if (!car.model) {
+    alert("Chọn dòng xe");
+    return;
+  }
+
+  if (!car.version) {
+    alert("Chọn phiên bản");
+    return;
+  }
+
+  // ==========================================
+  // LƯU XE
+  // ==========================================
+
+  if (editCar) {
+    updateCar(car.id, car);
+
+    alert("✅ Đã cập nhật xe");
+  } else {
+    addCar(car);
+
+    alert("✅ Đã thêm xe");
+  }
+
+  // ==========================================
+  // NẾU ĐI TỪ FACEBOOK QUEUE
+  // → QUAY LẠI ĐÚNG JOB
+  // ==========================================
+
+  const returnTo = searchParams.get("returnTo");
+  const jobId = searchParams.get("jobId");
+
+  if (returnTo === "queue") {
+    const queueUrl = jobId
+      ? `/facebook/queue?focusJobId=${encodeURIComponent(jobId)}`
+      : "/facebook/queue";
+
+    navigate(queueUrl);
+    return;
+  }
+
+  // ==========================================
+  // LUỒNG SỬA XE BÌNH THƯỜNG
+  // ==========================================
+
+  navigate("/cars");
+}
 
   return (
         <div className="form-container">
