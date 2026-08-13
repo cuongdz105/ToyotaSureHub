@@ -25,6 +25,7 @@ import {
 import {
     createFacebookQueueTestJob,
     getFacebookQueueTestTypes,
+    removeAllFacebookQueueTestJobs,
 } from "../../services/facebookQueueTestService";
 
 
@@ -754,6 +755,51 @@ function handleCreateTestJob(errorType) {
 }
 
 
+// ==========================================
+// REMOVE ALL TEST JOBS
+// ==========================================
+
+function handleClearTestJobs() {
+
+    const testCount =
+        queue.filter(
+            (job) =>
+                job &&
+                job.testMode === true
+        ).length;
+
+    if (testCount === 0) {
+
+        alert(
+            "🧪 Không có Job Test nào trong Queue."
+        );
+
+        return;
+    }
+
+    const confirmed =
+        window.confirm(
+            `🧹 Xóa ${testCount} Job TEST?\n\n` +
+            "Chỉ các Job có testMode = true sẽ bị xóa.\n" +
+            "Job thật sẽ được giữ nguyên."
+        );
+
+    if (!confirmed) {
+        return;
+    }
+
+    const removed =
+        removeAllFacebookQueueTestJobs();
+
+    refresh();
+
+    alert(
+        `🧹 Đã xóa ${removed} Job TEST.\n\n` +
+        "Các Job thật không bị ảnh hưởng."
+    );
+}
+
+
     // ==========================================
     // RENDER
     // ==========================================
@@ -986,123 +1032,6 @@ function handleCreateTestJob(errorType) {
                 Facebook thật.
 
             </div>
-
-
-            {/* =================================
-                DEV ERROR TEST
-            ================================= */}
-
-            {import.meta.env.DEV && (
-
-                <SectionCard
-                    title="🧪 DEV — Test Error Handling"
-                >
-
-                    <div
-                        style={{
-                            padding:
-                                "12px",
-
-                            marginBottom:
-                                "12px",
-
-                            background:
-                                "#fff8e1",
-
-                            border:
-                                "1px solid #ffe082",
-
-                            borderRadius:
-                                "8px",
-
-                            fontSize:
-                                "14px",
-                        }}
-                    >
-
-                        ⚠️{" "}
-                        <strong>
-                            Chỉ dùng để kiểm tra hệ thống.
-                        </strong>{" "}
-
-                        Các Job bên dưới là Job giả,
-                        không đăng Facebook thật.
-
-                    </div>
-
-
-                    <div
-                        style={{
-                            display:
-                                "flex",
-
-                            gap:
-                                "8px",
-
-                            flexWrap:
-                                "wrap",
-                        }}
-                    >
-
-                        {getFacebookQueueTestTypes().map(
-                            (test) => (
-
-                                <PrimaryButton
-                                    key={
-                                        test.type
-                                    }
-
-                                    onClick={() =>
-                                        handleCreateTestJob(
-                                            test.type
-                                        )
-                                    }
-
-                                    disabled={
-                                        processing
-                                    }
-
-                                    style={{
-                                        background:
-                                            "#6a1b9a",
-                                    }}
-                                >
-                                    {
-                                        test.label
-                                    }
-                                </PrimaryButton>
-
-                            )
-                        )}
-
-                    </div>
-
-
-                    <p
-                        style={{
-                            marginBottom:
-                                0,
-
-                            marginTop:
-                                "12px",
-
-                            color:
-                                "#777",
-
-                            fontSize:
-                                "13px",
-                        }}
-                    >
-
-                        💡 Hãy test từng loại lỗi
-                        để kiểm tra nút 🔧 Sửa lỗi
-                        → màn hình tương ứng.
-
-                    </p>
-
-                </SectionCard>
-
-            )}
 
 
             {/* =================================
@@ -1674,7 +1603,105 @@ function handleCreateTestJob(errorType) {
 
                                             >
 
+                                                {/* =================================
+    DEV ERROR TEST
+================================= */}
 
+{import.meta.env.DEV && (
+
+    <SectionCard
+        title="🧪 DEV — Test Error Handling"
+    >
+
+        <div
+            style={{
+                padding: "12px",
+                marginBottom: "12px",
+                background: "#fff8e1",
+                border: "1px solid #ffe082",
+                borderRadius: "8px",
+                fontSize: "14px",
+            }}
+        >
+
+            ⚠️{" "}
+            <strong>
+                Chỉ dùng để kiểm tra hệ thống.
+            </strong>{" "}
+
+            Các Job bên dưới là Job giả,
+            không đăng Facebook thật.
+
+        </div>
+
+
+        <div
+            style={{
+                display: "flex",
+                gap: "8px",
+                flexWrap: "wrap",
+            }}
+        >
+
+            {getFacebookQueueTestTypes().map(
+                (test) => (
+
+                    <PrimaryButton
+                        key={test.type}
+                        onClick={() =>
+                            handleCreateTestJob(
+                                test.type
+                            )
+                        }
+                        disabled={
+                            processing
+                        }
+                        style={{
+                            background:
+                                "#6a1b9a",
+                        }}
+                    >
+                        {test.label}
+                    </PrimaryButton>
+
+                )
+            )}
+
+            <PrimaryButton
+                onClick={
+                    handleClearTestJobs
+                }
+                disabled={
+                    processing
+                }
+                style={{
+                    background:
+                        "#777",
+                }}
+            >
+                🧹 Xóa toàn bộ Job Test
+            </PrimaryButton>
+
+        </div>
+
+
+        <p
+            style={{
+                marginBottom: 0,
+                marginTop: "12px",
+                color: "#777",
+                fontSize: "13px",
+            }}
+        >
+
+            💡 Hãy test từng loại lỗi để kiểm tra
+            nút 🔧 Sửa lỗi → màn hình tương ứng.
+
+        </p>
+
+    </SectionCard>
+
+)}
 
                                             🟢 Job hoàn tất.
 

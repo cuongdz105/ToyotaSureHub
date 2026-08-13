@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import SectionCard from "../../components/Common/SectionCard";
@@ -10,16 +10,14 @@ import {
 
 import {
     addToPostingQueue,
+    loadPostingQueue,
+    updateQueueJob,
 } from "../../services/facebookPostingQueueService";
 
 import {
     loadAccounts,
     getDefaultAccount,
 } from "../../services/facebookAccountService";
-
-import {
-    loadGroups,
-} from "../../services/facebookGroupService";
 
 import {
     generateFacebookPost,
@@ -38,19 +36,16 @@ function FacebookPostPreview() {
     const [postingCar, setPostingCar] =
         useState(null);
 
-    const [groups, setGroups] =
-        useState([]);
-
-    const [selectedGroupIds, setSelectedGroupIds] =
-        useState([]);
-
-    const [groupSearch, setGroupSearch] =
-        useState("");
+    const [group, setGroup] =
+        useState(null);
 
     const [content, setContent] =
         useState("");
 
     const [addingToQueue, setAddingToQueue] =
+        useState(false);
+
+    const [savingEdit, setSavingEdit] =
         useState(false);
 
     const [generatingAI, setGeneratingAI] =
@@ -64,10 +59,52 @@ function FacebookPostPreview() {
 
 
     // ==========================================
+    // EDIT MODE
+    // ==========================================
+
+    const [editMode, setEditMode] =
+        useState(false);
+
+    const [editJobId, setEditJobId] =
+        useState("");
+
+    const [editJob, setEditJob] =
+        useState(null);
+
+
+    // ==========================================
     // LOAD DỮ LIỆU
     // ==========================================
 
     useEffect(() => {
+
+        const params =
+            new URLSearchParams(
+                window.location.search
+            );
+
+        const returnTo =
+            params.get("returnTo");
+
+        const jobId =
+            params.get("jobId");
+
+
+        const isEditMode =
+            returnTo === "queue" &&
+            !!jobId;
+
+
+        setEditMode(isEditMode);
+
+        if (isEditMode) {
+            setEditJobId(jobId);
+        }
+
+
+        // --------------------------------------
+        // LOAD CURRENT POSTING CAR
+        // --------------------------------------
 
         const car =
             getCurrentPosting();
@@ -86,6 +123,10 @@ function FacebookPostPreview() {
             savedAccounts
         );
 
+
+        // --------------------------------------
+        // LOAD DEFAULT ACCOUNT
+        // --------------------------------------
 
         const defaultAccount =
             getDefaultAccount();
@@ -108,23 +149,12 @@ function FacebookPostPreview() {
                     savedAccounts[0].id
                 )
             );
+
         }
 
 
         // --------------------------------------
-        // LOAD FACEBOOK GROUPS
-        // --------------------------------------
-
-        const savedGroups =
-            loadGroups();
-
-        setGroups(
-            savedGroups
-        );
-
-
-        // --------------------------------------
-        // LOAD NHÓM ĐÃ CHỌN TỪ BƯỚC TRƯỚC
+        // LOAD GROUP
         // --------------------------------------
 
         const savedGroup =
@@ -137,19 +167,11 @@ function FacebookPostPreview() {
 
             try {
 
-                const parsedGroup =
+                setGroup(
                     JSON.parse(
                         savedGroup
-                    );
-
-                if (parsedGroup?.id) {
-
-                    setSelectedGroupIds([
-                        String(
-                            parsedGroup.id
-                        ),
-                    ]);
-                }
+                    )
+                );
 
             } catch (error) {
 
@@ -157,11 +179,120 @@ function FacebookPostPreview() {
                     "Không đọc được nhóm Facebook:",
                     error
                 );
+
             }
+
         }
 
 
         // --------------------------------------
+        // EDIT MODE:
+        // LOAD JOB CŨ
+        // --------------------------------------
+
+        if (isEditMode) {
+
+            const queue =
+                loadPostingQueue();
+
+            const existingJob =
+                queue.find(
+                    (job) =>
+                        String(job.id) ===
+                        String(jobId)
+                );
+
+
+            if (!existingJob) {
+
+                console.error(
+                    "Không tìm thấy Facebook Queue Job:",
+                    jobId
+                );
+
+                alert(
+                    "❌ Không tìm thấy Job Facebook cần sửa."
+                );
+
+                navigate(
+                    "/facebook/queue"
+                );
+
+                return;
+
+            }
+
+
+            console.log(
+                "📝 EDIT FACEBOOK QUEUE JOB:",
+                existingJob
+            );
+
+
+            setEditJob(
+                existingJob
+            );
+
+
+            // ----------------------------------
+            // LOAD CONTENT CỦA JOB CŨ
+            // ----------------------------------
+
+            setContent(
+                existingJob.content ||
+                ""
+            );
+
+
+            // ----------------------------------
+            // LOAD ACCOUNT CỦA JOB CŨ
+            // ----------------------------------
+
+            if (
+                existingJob.accountId !==
+                undefined &&
+                existingJob.accountId !==
+                null
+            ) {
+
+                setSelectedAccountId(
+                    String(
+                        existingJob.accountId
+                    )
+                );
+
+            }
+
+
+            // ----------------------------------
+            // LOAD GROUP CỦA JOB CŨ
+            // ----------------------------------
+
+            if (
+                existingJob.group
+            ) {
+
+                setGroup(
+                    existingJob.group
+                );
+
+
+                sessionStorage.setItem(
+                    "toyota_sure_selected_group",
+                    JSON.stringify(
+                        existingJob.group
+                    )
+                );
+
+            }
+
+
+            return;
+        }
+
+
+        // --------------------------------------
+        // NORMAL MODE:
         // LOAD AI CONTENT CŨ
         // --------------------------------------
 
@@ -172,9 +303,10 @@ function FacebookPostPreview() {
             setContent(
                 car.aiContent.facebook
             );
+
         }
 
-    }, []);
+    }, [navigate]);
 
 
     // ==========================================
@@ -192,6 +324,7 @@ function FacebookPostPreview() {
         ) {
 
             return false;
+
         }
 
 
@@ -203,6 +336,7 @@ function FacebookPostPreview() {
         ) {
 
             return false;
+
         }
 
 
@@ -235,6 +369,7 @@ function FacebookPostPreview() {
                     String(id) ===
                     groupId
             );
+
         }
 
 
@@ -256,287 +391,152 @@ function FacebookPostPreview() {
                 String(id) ===
                 groupId
         );
+
     }
 
 
     // ==========================================
-    // ACCOUNT ĐANG CHỌN
+    // ACCOUNT ĐƯỢC PHÉP ĐĂNG
     // ==========================================
 
-    const selectedAccount =
-        accounts.find(
-            (account) =>
-                String(
-                    account.id
-                ) ===
-                String(
-                    selectedAccountId
-                )
-        );
-
-
-    // ==========================================
-    // NHÓM ĐƯỢC PHÉP ĐĂNG
-    // ==========================================
-
-    const allowedGroups =
-        useMemo(() => {
-
-            if (!selectedAccount) {
-                return [];
-            }
-
-            return groups.filter(
-                (group) =>
-                    isAccountAllowedForGroup(
-                        selectedAccount,
-                        group
-                    )
-            );
-
-        }, [
-            groups,
-            selectedAccount,
-        ]);
+    const allowedAccounts =
+        group
+            ? accounts.filter(
+                  (account) =>
+                      isAccountAllowedForGroup(
+                          account,
+                          group
+                      )
+              )
+            : [];
 
 
     // ==========================================
-    // NHÓM SAU KHI TÌM KIẾM
-    // ==========================================
-
-    const filteredGroups =
-        useMemo(() => {
-
-            const keyword =
-                groupSearch
-                    .trim()
-                    .toLowerCase();
-
-            if (!keyword) {
-                return allowedGroups;
-            }
-
-            return allowedGroups.filter(
-                (group) => {
-
-                    const nameMatch =
-                        group.name
-                            ?.toLowerCase()
-                            .includes(
-                                keyword
-                            );
-
-                    const urlMatch =
-                        group.url
-                            ?.toLowerCase()
-                            .includes(
-                                keyword
-                            );
-
-                    const suitableMatch =
-                        Array.isArray(
-                            group.suitableCars
-                        ) &&
-                        group.suitableCars.some(
-                            (car) =>
-                                car
-                                    .toLowerCase()
-                                    .includes(
-                                        keyword
-                                    )
-                        );
-
-                    return (
-                        nameMatch ||
-                        urlMatch ||
-                        suitableMatch
-                    );
-                }
-            );
-
-        }, [
-            allowedGroups,
-            groupSearch,
-        ]);
-
-
-    // ==========================================
-    // NHÓM ĐÃ CHỌN
-    // ==========================================
-
-    const selectedGroups =
-        allowedGroups.filter(
-            (group) =>
-                selectedGroupIds.some(
-                    (id) =>
-                        String(id) ===
-                        String(group.id)
-                )
-        );
-
-
-    // ==========================================
-    // TỰ LOẠI NHÓM KHÔNG CÒN HỢP LỆ
-    // KHI ĐỔI FACEBOOK ACCOUNT
+    // TỰ CHỌN ACCOUNT HỢP LỆ
     // ==========================================
 
     useEffect(() => {
 
-        setSelectedGroupIds(
-            (currentIds) =>
-                currentIds.filter(
-                    (id) =>
-                        allowedGroups.some(
-                            (group) =>
-                                String(
-                                    group.id
-                                ) ===
-                                String(id)
+        // --------------------------------------
+        // EDIT MODE:
+        // ƯU TIÊN ACCOUNT CỦA JOB
+        // --------------------------------------
+
+        if (
+            editMode &&
+            editJob?.accountId !==
+                undefined &&
+            editJob?.accountId !==
+                null
+        ) {
+
+            const jobAccountStillAllowed =
+                allowedAccounts.some(
+                    (account) =>
+                        String(
+                            account.id
+                        ) ===
+                        String(
+                            editJob.accountId
                         )
+                );
+
+
+            if (
+                jobAccountStillAllowed
+            ) {
+
+                setSelectedAccountId(
+                    String(
+                        editJob.accountId
+                    )
+                );
+
+                return;
+
+            }
+
+        }
+
+
+        // --------------------------------------
+        // NORMAL ACCOUNT LOGIC
+        // --------------------------------------
+
+        if (!group) {
+            return;
+        }
+
+
+        if (
+            allowedAccounts.length ===
+            0
+        ) {
+
+            setSelectedAccountId(
+                ""
+            );
+
+            return;
+
+        }
+
+
+        const currentAccountStillAllowed =
+            allowedAccounts.some(
+                (account) =>
+                    String(
+                        account.id
+                    ) ===
+                    String(
+                        selectedAccountId
+                    )
+            );
+
+
+        if (
+            currentAccountStillAllowed
+        ) {
+
+            return;
+
+        }
+
+
+        const defaultAccount =
+            allowedAccounts.find(
+                (account) =>
+                    account.isDefault
+            );
+
+
+        if (defaultAccount) {
+
+            setSelectedAccountId(
+                String(
+                    defaultAccount.id
                 )
+            );
+
+            return;
+
+        }
+
+
+        setSelectedAccountId(
+            String(
+                allowedAccounts[0].id
+            )
         );
 
     }, [
+        group,
+        accounts,
         selectedAccountId,
-        allowedGroups,
+        editMode,
+        editJob,
+        allowedAccounts,
     ]);
-
-
-    // ==========================================
-    // CHỌN / BỎ CHỌN 1 NHÓM
-    // ==========================================
-
-    function toggleGroup(
-        groupId
-    ) {
-
-        const id =
-            String(
-                groupId
-            );
-
-        setSelectedGroupIds(
-            (currentIds) => {
-
-                const exists =
-                    currentIds.some(
-                        (item) =>
-                            String(
-                                item
-                            ) ===
-                            id
-                    );
-
-                if (exists) {
-
-                    return currentIds.filter(
-                        (item) =>
-                            String(
-                                item
-                            ) !==
-                            id
-                    );
-                }
-
-                return [
-                    ...currentIds,
-                    id,
-                ];
-            }
-        );
-    }
-
-
-    // ==========================================
-    // CHỌN TẤT CẢ NHÓM ĐANG HIỂN THỊ
-    // ==========================================
-
-    function handleSelectAllVisibleGroups() {
-
-        const visibleIds =
-            filteredGroups.map(
-                (group) =>
-                    String(
-                        group.id
-                    )
-            );
-
-        if (
-            visibleIds.length === 0
-        ) {
-            return;
-        }
-
-        setSelectedGroupIds(
-            (currentIds) => {
-
-                const allSelected =
-                    visibleIds.every(
-                        (id) =>
-                            currentIds.some(
-                                (item) =>
-                                    String(
-                                        item
-                                    ) ===
-                                    id
-                            )
-                    );
-
-                if (allSelected) {
-
-                    return currentIds.filter(
-                        (id) =>
-                            !visibleIds.includes(
-                                String(id)
-                            )
-                    );
-                }
-
-                return Array.from(
-                    new Set([
-                        ...currentIds.map(
-                            (id) =>
-                                String(id)
-                        ),
-                        ...visibleIds,
-                    ])
-                );
-            }
-        );
-    }
-
-
-    // ==========================================
-    // CHỌN TẤT CẢ NHÓM ĐƯỢC PHÉP
-    // ==========================================
-
-    function handleSelectAllAllowedGroups() {
-
-        if (
-            allowedGroups.length === 0
-        ) {
-            return;
-        }
-
-        setSelectedGroupIds(
-            allowedGroups.map(
-                (group) =>
-                    String(
-                        group.id
-                    )
-            )
-        );
-    }
-
-
-    // ==========================================
-    // BỎ CHỌN TẤT CẢ
-    // ==========================================
-
-    function handleClearSelectedGroups() {
-
-        setSelectedGroupIds([]);
-    }
 
 
     // ==========================================
@@ -550,7 +550,9 @@ function FacebookPostPreview() {
             <main className="content">
 
                 <h1>
-                    🚀 Facebook Posting
+                    {editMode
+                        ? "📝 Sửa Facebook Queue"
+                        : "🚀 Facebook Posting"}
                 </h1>
 
 
@@ -564,20 +566,33 @@ function FacebookPostPreview() {
                     </p>
 
 
+                    <p
+                        style={{
+                            color: "#666",
+                        }}
+                    >
+                        {editMode
+                            ? "Job vẫn tồn tại trong Queue, nhưng phiên đăng hiện tại không còn thông tin chiếc xe."
+                            : "Hãy chọn một chiếc xe trước khi tạo bài đăng Facebook."}
+                    </p>
+
+
                     <PrimaryButton
                         onClick={() =>
                             navigate(
-                                "/cars"
+                                "/facebook/queue"
                             )
                         }
                     >
-                        🚗 Quay lại danh sách xe
+                        📋 Quay lại Facebook Queue
                     </PrimaryButton>
 
                 </SectionCard>
 
             </main>
+
         );
+
     }
 
 
@@ -603,6 +618,7 @@ function FacebookPostPreview() {
         ) {
 
             return image;
+
         }
 
 
@@ -610,6 +626,7 @@ function FacebookPostPreview() {
             image?.preview ||
             ""
         );
+
     }
 
 
@@ -619,18 +636,25 @@ function FacebookPostPreview() {
 
     async function handleGenerateAI() {
 
-        if (generatingAI) {
+        if (
+            generatingAI
+        ) {
+
             return;
+
         }
 
 
-        if (!postingCar) {
+        if (
+            !postingCar
+        ) {
 
             alert(
                 "⚠️ Chưa có xe để tạo nội dung."
             );
 
             return;
+
         }
 
 
@@ -641,11 +665,21 @@ function FacebookPostPreview() {
             );
 
 
+            /*
+             * Gọi AI Service hiện có
+             */
+
             const result =
                 await generateFacebookPost(
                     postingCar
                 );
 
+
+            /*
+             * Hỗ trợ nhiều kiểu response
+             * để không phụ thuộc cứng vào
+             * Mock AI / API sau này.
+             */
 
             let generatedContent =
                 "";
@@ -679,6 +713,7 @@ function FacebookPostPreview() {
 
                 generatedContent =
                     result.facebook;
+
             }
 
 
@@ -689,6 +724,7 @@ function FacebookPostPreview() {
                 throw new Error(
                     "AI không trả về nội dung Facebook."
                 );
+
             }
 
 
@@ -722,18 +758,282 @@ function FacebookPostPreview() {
             setGeneratingAI(
                 false
             );
+
         }
+
     }
 
 
     // ==========================================
-    // TẠO NHIỀU JOB VÀO QUEUE
+    // LƯU NỘI DUNG JOB CŨ
     // ==========================================
 
-    function handleAddBulkToQueue() {
+    function handleSaveEdit() {
 
         if (
-            !selectedAccount
+            !editMode
+        ) {
+
+            return;
+
+        }
+
+
+        if (
+            !editJobId
+        ) {
+
+            alert(
+                "❌ Không xác định được Job cần sửa."
+            );
+
+            return;
+
+        }
+
+
+        if (
+            !content.trim()
+        ) {
+
+            alert(
+                "⚠️ Nội dung Facebook đang trống.\n\nÔng hãy nhập nội dung trước khi lưu."
+            );
+
+            return;
+
+        }
+
+
+        try {
+
+            setSavingEdit(
+                true
+            );
+
+
+            // ----------------------------------
+            // KIỂM TRA JOB CÒN TỒN TẠI
+            // ----------------------------------
+
+            const queue =
+                loadPostingQueue();
+
+
+            const existingJob =
+                queue.find(
+                    (job) =>
+                        String(job.id) ===
+                        String(editJobId)
+                );
+
+
+            if (!existingJob) {
+
+                throw new Error(
+                    "Không tìm thấy Job trong Facebook Queue."
+                );
+
+            }
+
+
+            // ----------------------------------
+            // XÁC ĐỊNH ACCOUNT
+            // ----------------------------------
+
+            const accountId =
+                selectedAccountId
+                    ? Number(
+                          selectedAccountId
+                      )
+                    : existingJob.accountId;
+
+
+            // ----------------------------------
+            // UPDATE JOB CŨ
+            // ----------------------------------
+
+            const updatedJob =
+                updateQueueJob(
+                    editJobId,
+                    {
+
+                        // Nội dung mới
+                        content:
+                            content.trim(),
+
+                        // Account giữ nguyên
+                        // nếu có
+                        accountId:
+                            accountId,
+
+                        // Group giữ nguyên
+                        // theo Job cũ
+                        group:
+                            group ||
+                            existingJob.group,
+
+                        // Khi sửa xong:
+                        // cho Job quay lại waiting
+                        status:
+                            "waiting",
+
+                        // Xóa lỗi cũ
+                        error:
+                            null,
+
+                        // Xóa kết quả
+                        // của lần chạy trước
+                        result:
+                            null,
+
+                        // Reset retry
+                        retryCount:
+                            0,
+
+                        // Đánh dấu thời điểm
+                        // sửa nội dung
+                        editedAt:
+                            new Date().toISOString(),
+
+                    }
+                );
+
+
+            if (
+                !updatedJob
+            ) {
+
+                throw new Error(
+                    "Không cập nhật được Job trong Queue."
+                );
+
+            }
+
+
+            console.log(
+                "✅ Đã cập nhật Facebook Queue Job:",
+                updatedJob
+            );
+
+
+            alert(
+                "✅ Đã lưu nội dung vào Job cũ!\n\n" +
+                "Job đã được đưa trở lại trạng thái CHỜ XỬ LÝ."
+            );
+
+
+            // ----------------------------------
+            // QUAY LẠI QUEUE
+            // ----------------------------------
+
+            navigate(
+                `/facebook/queue?focusJobId=${encodeURIComponent(
+                    editJobId
+                )}`
+            );
+
+
+        } catch (error) {
+
+            console.error(
+                "❌ Lỗi lưu nội dung Facebook Queue Job:",
+                error
+            );
+
+
+            alert(
+                "❌ Không thể lưu nội dung Job:\n\n" +
+                    (
+                        error?.message ||
+                        "Lỗi không xác định."
+                    )
+            );
+
+        } finally {
+
+            setSavingEdit(
+                false
+            );
+
+        }
+
+    }
+
+
+    // ==========================================
+    // HỦY SỬA
+    // ==========================================
+
+    function handleCancelEdit() {
+
+        if (
+            editMode &&
+            editJobId
+        ) {
+
+            navigate(
+                `/facebook/queue?focusJobId=${encodeURIComponent(
+                    editJobId
+                )}`
+            );
+
+            return;
+
+        }
+
+
+        navigate(
+            "/facebook/queue"
+        );
+
+    }
+
+
+    // ==========================================
+    // THÊM VÀO QUEUE
+    // ==========================================
+
+    function handleAddToQueue() {
+
+        if (
+            editMode
+        ) {
+
+            handleSaveEdit();
+
+            return;
+
+        }
+
+
+        if (!group) {
+
+            alert(
+                "⚠️ Chưa chọn hội nhóm."
+            );
+
+            return;
+
+        }
+
+
+        if (
+            allowedAccounts.length ===
+            0
+        ) {
+
+            alert(
+                "⚠️ Không có tài khoản Facebook nào được phép đăng vào nhóm này."
+            );
+
+            return;
+
+        }
+
+
+        if (
+            !selectedAccountId
         ) {
 
             alert(
@@ -741,32 +1041,32 @@ function FacebookPostPreview() {
             );
 
             return;
+
         }
 
 
+        const selectedAccount =
+            allowedAccounts.find(
+                (account) =>
+                    String(
+                        account.id
+                    ) ===
+                    String(
+                        selectedAccountId
+                    )
+            );
+
+
         if (
-            selectedAccount.status !==
-            "active"
+            !selectedAccount
         ) {
 
             alert(
-                "⚠️ Tài khoản Facebook hiện không hoạt động."
+                "⚠️ Tài khoản Facebook đã chọn không được phép đăng vào nhóm này."
             );
 
             return;
-        }
 
-
-        if (
-            selectedGroups.length ===
-            0
-        ) {
-
-            alert(
-                "⚠️ Chưa chọn nhóm Facebook."
-            );
-
-            return;
         }
 
 
@@ -780,6 +1080,7 @@ function FacebookPostPreview() {
             );
 
             return;
+
         }
 
 
@@ -792,21 +1093,7 @@ function FacebookPostPreview() {
             );
 
             return;
-        }
 
-
-        const confirmed =
-            window.confirm(
-                `🚀 Tạo ${selectedGroups.length} bài đăng vào Queue?\n\n` +
-                `🚗 Xe: ${postingCar.brand || ""} ${postingCar.model || ""}\n` +
-                `👤 Facebook: ${selectedAccount.name}\n` +
-                `👥 Số nhóm: ${selectedGroups.length}\n` +
-                `📷 Ảnh: ${images.length}`
-            );
-
-
-        if (!confirmed) {
-            return;
         }
 
 
@@ -817,58 +1104,43 @@ function FacebookPostPreview() {
             );
 
 
-            const createdJobs = [];
+            const job =
+                addToPostingQueue({
 
+                    carId:
+                        postingCar.id,
 
-            for (
-                const currentGroup of selectedGroups
-            ) {
+                    group,
 
-                const job =
-                    addToPostingQueue({
+                    content,
 
-                        carId:
-                            postingCar.id,
+                    imageCount:
+                        images.length,
 
-                        group: {
-                            ...currentGroup,
+                    accountId:
+                        Number(
+                            selectedAccountId
+                        ),
 
-                            matchScore:
-                                currentGroup.matchScore ||
-                                0,
-                        },
-
-                        content,
-
-                        imageCount:
-                            images.length,
-
-                        accountId:
-                            Number(
-                                selectedAccountId
-                            ),
-                    });
-
-
-                createdJobs.push(
-                    job
-                );
-            }
+                });
 
 
             console.log(
-                "✅ Bulk Facebook Queue Jobs:",
-                createdJobs
+                "✅ Facebook Queue Job:",
+                job
             );
 
 
             alert(
-                "✅ Đã tạo Queue thành công!\n\n" +
+                "✅ Đã thêm bài đăng vào Queue!\n\n" +
+
                 `🚗 Xe: ${postingCar.brand || ""} ${postingCar.model || ""}\n` +
-                `👤 Facebook: ${selectedAccount.name}\n` +
-                `👥 Đã tạo: ${createdJobs.length} Job\n` +
-                `📷 Ảnh mỗi bài: ${images.length}\n\n` +
-                "Các bài đang ở trạng thái CHỜ ĐĂNG."
+
+                `👤 Tài khoản: ${selectedAccount.name}\n` +
+
+                `👥 Nhóm: ${group.name}\n` +
+
+                `📷 Ảnh: ${images.length}`
             );
 
 
@@ -876,16 +1148,17 @@ function FacebookPostPreview() {
                 "/facebook/queue"
             );
 
+
         } catch (error) {
 
             console.error(
-                "Lỗi tạo Bulk Queue:",
+                "Lỗi thêm vào Facebook Queue:",
                 error
             );
 
 
             alert(
-                "❌ Không thể tạo Queue:\n\n" +
+                "❌ Không thể thêm vào Queue:\n\n" +
                     (
                         error?.message ||
                         "Lỗi không xác định."
@@ -897,22 +1170,24 @@ function FacebookPostPreview() {
             setAddingToQueue(
                 false
             );
+
         }
+
     }
 
 
     // ==========================================
-    // CHECKBOX TRẠNG THÁI
+    // ACCOUNT ĐANG CHỌN
     // ==========================================
 
-    const allVisibleSelected =
-        filteredGroups.length > 0 &&
-        filteredGroups.every(
-            (group) =>
-                selectedGroupIds.some(
-                    (id) =>
-                        String(id) ===
-                        String(group.id)
+    const selectedAccount =
+        allowedAccounts.find(
+            (account) =>
+                String(
+                    account.id
+                ) ===
+                String(
+                    selectedAccountId
                 )
         );
 
@@ -925,20 +1200,70 @@ function FacebookPostPreview() {
 
         <main className="content">
 
+
+            {/* =================================
+                HEADER
+            ================================= */}
+
             <h1>
-                🚀 Facebook Posting
+
+                {editMode
+                    ? "📝 Sửa bài Facebook trong Queue"
+                    : "🚀 Facebook Posting"}
+
             </h1>
 
 
-            <p
-                style={{
-                    color: "#666",
-                    marginTop: 0,
-                }}
-            >
-                Chọn một Facebook và nhiều hội nhóm.
-                ToyotaSureHub sẽ tự tạo Queue cho từng nhóm.
-            </p>
+            {editMode && (
+
+                <div
+                    style={{
+                        marginBottom:
+                            "16px",
+
+                        padding:
+                            "14px",
+
+                        background:
+                            "#e3f2fd",
+
+                        border:
+                            "1px solid #90caf9",
+
+                        borderRadius:
+                            "8px",
+
+                        color:
+                            "#1565c0",
+                    }}
+                >
+
+                    <strong>
+                        📝 CHẾ ĐỘ SỬA JOB
+                    </strong>
+
+                    <div
+                        style={{
+                            marginTop:
+                                "6px",
+                        }}
+                    >
+
+                        Ông đang chỉnh sửa nội dung
+                        của Job hiện có trong
+                        Facebook Queue.
+
+                        <br />
+
+                        <strong>
+                            Không tạo Job mới.
+                        </strong>
+
+                    </div>
+
+                </div>
+
+            )}
 
 
             {/* =================================
@@ -950,29 +1275,93 @@ function FacebookPostPreview() {
             >
 
                 <h2>
+
                     {
                         postingCar.brand
                     }{" "}
+
                     {
                         postingCar.model
                     }
+
                 </h2>
 
 
                 <p>
+
                     {
                         postingCar.version
                     }
+
                     {" · "}
+
                     {
                         postingCar.year
                     }
-                    {postingCar.color
-                        ? ` · ${postingCar.color}`
-                        : ""}
+
+                    {
+                        postingCar.color
+                            ? ` · ${postingCar.color}`
+                            : ""
+                    }
+
                 </p>
 
             </SectionCard>
+
+
+            {/* =================================
+                GROUP
+            ================================= */}
+
+            {group && (
+
+                <SectionCard
+                    title="👥 Nhóm đăng"
+                >
+
+                    <h2>
+                        {
+                            group.name
+                        }
+                    </h2>
+
+
+                    <p>
+
+                        ⭐ Độ phù hợp:{" "}
+
+                        <strong>
+
+                            {
+                                group.matchScore ||
+                                0
+                            }
+                            %
+
+                        </strong>
+
+                    </p>
+
+
+                    {group.url && (
+
+                        <PrimaryButton
+                            onClick={() =>
+                                window.open(
+                                    group.url,
+                                    "_blank"
+                                )
+                            }
+                        >
+                            🌐 Mở nhóm
+                        </PrimaryButton>
+
+                    )}
+
+                </SectionCard>
+
+            )}
 
 
             {/* =================================
@@ -980,7 +1369,7 @@ function FacebookPostPreview() {
             ================================= */}
 
             <SectionCard
-                title="👤 1. Chọn tài khoản Facebook"
+                title="👤 Tài khoản Facebook đăng"
             >
 
                 {accounts.length ===
@@ -1006,6 +1395,65 @@ function FacebookPostPreview() {
 
                     </div>
 
+                ) : !group ? (
+
+                    <p>
+                        ⚠️ Chưa chọn hội nhóm.
+                    </p>
+
+                ) : allowedAccounts.length ===
+                  0 ? (
+
+                    <div
+                        style={{
+                            padding:
+                                "14px",
+
+                            background:
+                                "#fff3cd",
+
+                            border:
+                                "1px solid #ffe69c",
+
+                            borderRadius:
+                                "8px",
+                        }}
+                    >
+
+                        <p
+                            style={{
+                                marginTop:
+                                    0,
+
+                                fontWeight:
+                                    "600",
+                            }}
+                        >
+                            🚫 Không có tài khoản
+                            Facebook nào được
+                            phép đăng vào nhóm này.
+                        </p>
+
+
+                        <p
+                            style={{
+                                marginBottom:
+                                    0,
+
+                                color:
+                                    "#666",
+                            }}
+                        >
+
+                            Hãy vào Facebook
+                            Accounts → Quản lý nhóm
+                            để cấp quyền cho tài
+                            khoản.
+
+                        </p>
+
+                    </div>
+
                 ) : (
 
                     <div
@@ -1015,15 +1463,40 @@ function FacebookPostPreview() {
                         }}
                     >
 
+                        <label
+                            style={{
+                                display:
+                                    "block",
+
+                                fontWeight:
+                                    "600",
+
+                                marginBottom:
+                                    "8px",
+                            }}
+                        >
+
+                            Chọn tài khoản sẽ dùng
+                            để đăng:
+
+                        </label>
+
+
                         <select
                             value={
                                 selectedAccountId
                             }
+
                             onChange={(e) =>
                                 setSelectedAccountId(
                                     e.target.value
                                 )
                             }
+
+                            disabled={
+                                editMode
+                            }
+
                             style={{
                                 width:
                                     "100%",
@@ -1044,7 +1517,9 @@ function FacebookPostPreview() {
                                     "border-box",
 
                                 background:
-                                    "#fff",
+                                    editMode
+                                        ? "#f5f5f5"
+                                        : "#fff",
                             }}
                         >
 
@@ -1053,7 +1528,7 @@ function FacebookPostPreview() {
                             </option>
 
 
-                            {accounts.map(
+                            {allowedAccounts.map(
                                 (
                                     account
                                 ) => (
@@ -1062,6 +1537,7 @@ function FacebookPostPreview() {
                                         key={
                                             account.id
                                         }
+
                                         value={
                                             account.id
                                         }
@@ -1075,11 +1551,6 @@ function FacebookPostPreview() {
                                             ? " ⭐ Mặc định"
                                             : ""}
 
-                                        {account.status !==
-                                        "active"
-                                            ? " 🔴 Không hoạt động"
-                                            : ""}
-
                                     </option>
 
                                 )
@@ -1088,7 +1559,30 @@ function FacebookPostPreview() {
                         </select>
 
 
-                        {selectedAccount && (
+                        {editMode && (
+
+                            <div
+                                style={{
+                                    marginTop:
+                                        "8px",
+
+                                    fontSize:
+                                        "13px",
+
+                                    color:
+                                        "#666",
+                                }}
+                            >
+
+                                🔒 Tài khoản của Job
+                                cũ được giữ nguyên.
+
+                            </div>
+
+                        )}
+
+
+                        {selectedAccountId && (
 
                             <div
                                 style={{
@@ -1107,52 +1601,68 @@ function FacebookPostPreview() {
                             >
 
                                 <div>
+
                                     👤{" "}
+
                                     <strong>
+
                                         {
-                                            selectedAccount.name
+                                            selectedAccount?.name ||
+                                            "Không rõ"
                                         }
+
                                     </strong>
+
                                 </div>
 
 
                                 <div>
+
                                     🟢 Trạng thái:{" "}
+
                                     {
-                                        selectedAccount.status
+                                        selectedAccount?.status ||
+                                        "Không rõ"
                                     }
+
                                 </div>
 
 
                                 <div>
+
                                     👥 Quyền nhóm:{" "}
 
-                                    {selectedAccount.allowAllGroups !==
-                                    false
-                                        ? selectedAccount.excludedGroupIds?.length >
-                                          0
-                                            ? "Tất cả nhóm, trừ một số nhóm"
-                                            : "Tất cả các nhóm"
-                                        : "Chỉ nhóm được chọn"}
-                                </div>
-
-
-                                <div
-                                    style={{
-                                        marginTop:
-                                            "6px",
-                                        fontWeight:
-                                            "600",
-                                    }}
-                                >
-                                    📊 Được phép đăng:
-                                    {" "}
                                     {
-                                        allowedGroups.length
+                                        selectedAccount?.allowAllGroups !==
+                                        false
+
+                                            ? selectedAccount
+                                                  ?.excludedGroupIds
+                                                  ?.length > 0
+
+                                                ? "Tất cả nhóm, trừ một số nhóm"
+
+                                                : "Tất cả các nhóm"
+
+                                            : "Chỉ nhóm được chọn"
                                     }
-                                    {" "}
-                                    nhóm
+
                                 </div>
+
+
+                                {selectedAccount?.note && (
+
+                                    <div>
+
+                                        📝 Ghi chú:{" "}
+
+                                        {
+                                            selectedAccount.note
+                                        }
+
+                                    </div>
+
+                                )}
 
                             </div>
 
@@ -1166,404 +1676,11 @@ function FacebookPostPreview() {
 
 
             {/* =================================
-                GROUP SELECTOR
-            ================================= */}
-
-            <SectionCard
-                title="👥 2. Chọn các nhóm muốn đăng"
-            >
-
-                {!selectedAccount ? (
-
-                    <p>
-                        ⚠️ Hãy chọn tài khoản Facebook
-                        trước.
-                    </p>
-
-                ) : allowedGroups.length ===
-                  0 ? (
-
-                    <div
-                        style={{
-                            padding:
-                                "14px",
-
-                            background:
-                                "#fff3cd",
-
-                            border:
-                                "1px solid #ffe69c",
-
-                            borderRadius:
-                                "8px",
-                        }}
-                    >
-
-                        <strong>
-                            🚫 Tài khoản này chưa được
-                            phép đăng vào nhóm nào.
-                        </strong>
-
-                        <p
-                            style={{
-                                marginBottom:
-                                    0,
-                                color:
-                                    "#666",
-                            }}
-                        >
-                            Vào Facebook Accounts để
-                            thiết lập quyền nhóm.
-                        </p>
-
-                    </div>
-
-                ) : (
-
-                    <>
-
-                        {/* SEARCH + ACTIONS */}
-
-                        <div
-                            style={{
-                                display:
-                                    "flex",
-
-                                gap:
-                                    "10px",
-
-                                flexWrap:
-                                    "wrap",
-
-                                marginBottom:
-                                    "14px",
-                            }}
-                        >
-
-                            <input
-                                type="text"
-                                value={
-                                    groupSearch
-                                }
-                                onChange={(e) =>
-                                    setGroupSearch(
-                                        e.target.value
-                                    )
-                                }
-                                placeholder="🔍 Tìm tên nhóm..."
-                                style={{
-                                    flex:
-                                        "1 1 300px",
-
-                                    padding:
-                                        "11px",
-
-                                    border:
-                                        "1px solid #ccc",
-
-                                    borderRadius:
-                                        "8px",
-
-                                    fontSize:
-                                        "15px",
-
-                                    boxSizing:
-                                        "border-box",
-                                }}
-                            />
-
-
-                            <PrimaryButton
-                                onClick={
-                                    handleSelectAllAllowedGroups
-                                }
-                            >
-                                ☑ Chọn tất cả
-                            </PrimaryButton>
-
-
-                            <PrimaryButton
-                                onClick={
-                                    handleClearSelectedGroups
-                                }
-                                style={{
-                                    background:
-                                        "#777",
-                                }}
-                            >
-                                ⬜ Bỏ chọn
-                            </PrimaryButton>
-
-                        </div>
-
-
-                        {/* SUMMARY */}
-
-                        <div
-                            style={{
-                                marginBottom:
-                                    "12px",
-
-                                padding:
-                                    "12px",
-
-                                background:
-                                    "#f5f5f5",
-
-                                borderRadius:
-                                    "8px",
-                            }}
-                        >
-
-                            <strong>
-                                👥 Đã chọn:{" "}
-                                {
-                                    selectedGroups.length
-                                }
-                                {" / "}
-                                {
-                                    allowedGroups.length
-                                }
-                                {" "}
-                                nhóm
-                            </strong>
-
-
-                            {groupSearch && (
-                                <span
-                                    style={{
-                                        marginLeft:
-                                            "12px",
-                                        color:
-                                            "#666",
-                                    }}
-                                >
-                                    🔍 Hiển thị{" "}
-                                    {
-                                        filteredGroups.length
-                                    }
-                                    {" "}
-                                    nhóm
-                                </span>
-                            )}
-
-                        </div>
-
-
-                        {/* SELECT VISIBLE */}
-
-                        {filteredGroups.length >
-                            0 && (
-
-                            <PrimaryButton
-                                onClick={
-                                    handleSelectAllVisibleGroups
-                                }
-                                style={{
-                                    marginBottom:
-                                        "14px",
-                                    background:
-                                        allVisibleSelected
-                                            ? "#777"
-                                            : "#1976d2",
-                                }}
-                            >
-                                {allVisibleSelected
-                                    ? "⬜ Bỏ chọn nhóm đang hiển thị"
-                                    : "☑ Chọn tất cả nhóm đang hiển thị"}
-                            </PrimaryButton>
-
-                        )}
-
-
-                        {/* GROUP LIST */}
-
-                        <div
-                            style={{
-                                display:
-                                    "grid",
-
-                                gap:
-                                    "10px",
-
-                                maxHeight:
-                                    "500px",
-
-                                overflowY:
-                                    "auto",
-
-                                paddingRight:
-                                    "4px",
-                            }}
-                        >
-
-                            {filteredGroups.length ===
-                            0 ? (
-
-                                <p
-                                    style={{
-                                        color:
-                                            "#777",
-                                    }}
-                                >
-                                    🔍 Không tìm thấy
-                                    nhóm phù hợp.
-                                </p>
-
-                            ) : (
-
-                                filteredGroups.map(
-                                    (
-                                        currentGroup
-                                    ) => {
-
-                                        const isSelected =
-                                            selectedGroupIds.some(
-                                                (
-                                                    id
-                                                ) =>
-                                                    String(
-                                                        id
-                                                    ) ===
-                                                    String(
-                                                        currentGroup.id
-                                                    )
-                                            );
-
-
-                                        return (
-
-                                            <label
-                                                key={
-                                                    currentGroup.id
-                                                }
-                                                style={{
-                                                    display:
-                                                        "flex",
-
-                                                    alignItems:
-                                                        "center",
-
-                                                    gap:
-                                                        "12px",
-
-                                                    padding:
-                                                        "12px",
-
-                                                    border:
-                                                        isSelected
-                                                            ? "2px solid #1976d2"
-                                                            : "1px solid #ddd",
-
-                                                    borderRadius:
-                                                        "10px",
-
-                                                    background:
-                                                        isSelected
-                                                            ? "#eaf3ff"
-                                                            : "#fff",
-
-                                                    cursor:
-                                                        "pointer",
-                                                }}
-                                            >
-
-                                                <input
-                                                    type="checkbox"
-                                                    checked={
-                                                        isSelected
-                                                    }
-                                                    onChange={() =>
-                                                        toggleGroup(
-                                                            currentGroup.id
-                                                        )
-                                                    }
-                                                    style={{
-                                                        width:
-                                                            "20px",
-
-                                                        height:
-                                                            "20px",
-
-                                                        flexShrink:
-                                                            0,
-                                                    }}
-                                                />
-
-
-                                                <div
-                                                    style={{
-                                                        flex:
-                                                            1,
-                                                    }}
-                                                >
-
-                                                    <div
-                                                        style={{
-                                                            fontWeight:
-                                                                "600",
-                                                        }}
-                                                    >
-                                                        👥{" "}
-                                                        {
-                                                            currentGroup.name
-                                                        }
-                                                    </div>
-
-
-                                                    <div
-                                                        style={{
-                                                            marginTop:
-                                                                "4px",
-
-                                                            fontSize:
-                                                                "13px",
-
-                                                            color:
-                                                                "#777",
-                                                        }}
-                                                    >
-
-                                                        📌 Đã đăng:{" "}
-                                                        {
-                                                            currentGroup.totalPosts ||
-                                                            0
-                                                        }
-
-                                                        {" · "}
-
-                                                        🟢{" "}
-                                                        {
-                                                            currentGroup.status ||
-                                                            "active"
-                                                        }
-
-                                                    </div>
-
-                                                </div>
-
-                                            </label>
-
-                                        );
-                                    }
-                                )
-
-                            )}
-
-                        </div>
-
-                    </>
-                )}
-
-            </SectionCard>
-
-
-            {/* =================================
                 ẢNH XE
             ================================= */}
 
             <SectionCard
-                title="📷 3. Ảnh xe"
+                title="📷 Ảnh xe"
             >
 
                 {images.length ===
@@ -1606,6 +1723,7 @@ function FacebookPostPreview() {
                                         key={
                                             index
                                         }
+
                                         style={{
                                             border:
                                                 "1px solid #ddd",
@@ -1625,10 +1743,12 @@ function FacebookPostPreview() {
                                             src={
                                                 src
                                             }
+
                                             alt={`Ảnh xe ${
                                                 index +
                                                 1
                                             }`}
+
                                             style={{
                                                 width:
                                                     "100%",
@@ -1647,6 +1767,7 @@ function FacebookPostPreview() {
                                     </div>
 
                                 );
+
                             }
                         )}
 
@@ -1662,7 +1783,11 @@ function FacebookPostPreview() {
             ================================= */}
 
             <SectionCard
-                title="📝 4. Nội dung Facebook"
+                title={
+                    editMode
+                        ? "📝 Chỉnh sửa nội dung Facebook"
+                        : "📝 Nội dung Facebook"
+                }
             >
 
                 <div
@@ -1685,15 +1810,22 @@ function FacebookPostPreview() {
                         onClick={
                             handleGenerateAI
                         }
+
                         disabled={
                             generatingAI
                         }
                     >
+
                         {generatingAI
+
                             ? "⏳ AI đang viết..."
+
                             : content.trim()
+
                                 ? "🔄 TẠO LẠI BẰNG AI"
+
                                 : "🤖 TẠO NỘI DUNG BẰNG AI"}
+
                     </PrimaryButton>
 
 
@@ -1703,15 +1835,20 @@ function FacebookPostPreview() {
                             onClick={() =>
                                 setContent("")
                             }
+
                             disabled={
-                                generatingAI
+                                generatingAI ||
+                                savingEdit
                             }
+
                             style={{
                                 background:
                                     "#777",
                             }}
                         >
+
                             🗑️ Xóa nội dung
+
                         </PrimaryButton>
 
                     )}
@@ -1740,12 +1877,57 @@ function FacebookPostPreview() {
                         }}
                     >
 
-                        💡 Xe này chưa có nội dung
-                        Facebook. Ông có thể bấm{" "}
+                        💡 Xe này chưa có nội
+                        dung Facebook. Ông có thể
+                        bấm{" "}
+
                         <strong>
                             "Tạo nội dung bằng AI"
-                        </strong>
-                        {" "}hoặc tự nhập nội dung.
+                        </strong>{" "}
+
+                        hoặc tự nhập nội dung bên
+                        dưới.
+
+                    </div>
+
+                )}
+
+
+                {editMode && (
+
+                    <div
+                        style={{
+                            marginBottom:
+                                "12px",
+
+                            padding:
+                                "12px",
+
+                            background:
+                                "#f3e5f5",
+
+                            border:
+                                "1px solid #ce93d8",
+
+                            borderRadius:
+                                "8px",
+
+                            color:
+                                "#6a1b9a",
+                        }}
+                    >
+
+                        ✏️ Đây là nội dung đang
+                        được lưu trong Job cũ.
+
+                        <br />
+
+                        Ông chỉnh sửa trực tiếp
+                        bên dưới rồi bấm
+                        <strong>
+                            {" "}
+                            "LƯU NỘI DUNG & QUAY LẠI QUEUE"
+                        </strong>.
 
                     </div>
 
@@ -1753,15 +1935,19 @@ function FacebookPostPreview() {
 
 
                 <textarea
+
                     value={
                         content
                     }
+
                     onChange={(e) =>
                         setContent(
                             e.target.value
                         )
                     }
+
                     placeholder="Nội dung Facebook sẽ xuất hiện ở đây..."
+
                     style={{
                         width:
                             "100%",
@@ -1792,6 +1978,7 @@ function FacebookPostPreview() {
                         resize:
                             "vertical",
                     }}
+
                 />
 
 
@@ -1816,29 +2003,38 @@ function FacebookPostPreview() {
 
 
             {/* =================================
-                BULK READY / ACTION
+                READY
             ================================= */}
 
             <SectionCard
-                title="🚀 5. Sẵn sàng tạo Queue"
+                title={
+                    editMode
+                        ? "💾 Lưu thay đổi"
+                        : "🚀 Sẵn sàng đăng"
+                }
             >
 
                 <div>
 
+
                     <div
                         style={{
                             marginBottom:
                                 "10px",
                         }}
                     >
-                        👤 Facebook:{" "}
+
+                        👤 Tài khoản:{" "}
 
                         <strong>
+
                             {
                                 selectedAccount?.name ||
-                                "Chưa chọn"
+                                "Chưa chọn tài khoản"
                             }
+
                         </strong>
+
                     </div>
 
 
@@ -1848,13 +2044,18 @@ function FacebookPostPreview() {
                                 "10px",
                         }}
                     >
-                        👥 Số nhóm:{" "}
+
+                        👥 Nhóm:{" "}
 
                         <strong>
+
                             {
-                                selectedGroups.length
+                                group?.name ||
+                                "Chưa chọn nhóm"
                             }
+
                         </strong>
+
                     </div>
 
 
@@ -1864,13 +2065,17 @@ function FacebookPostPreview() {
                                 "10px",
                         }}
                     >
-                        📷 Số ảnh mỗi bài:{" "}
+
+                        📷 Số ảnh:{" "}
 
                         <strong>
+
                             {
                                 images.length
                             }
+
                         </strong>
+
                     </div>
 
 
@@ -1880,37 +2085,183 @@ function FacebookPostPreview() {
                                 "10px",
                         }}
                     >
+
                         📝 Nội dung:{" "}
 
                         <strong>
+
                             {content.trim()
                                 ? "Đã có"
                                 : "Chưa có"}
+
                         </strong>
+
                     </div>
+
+
+                    {editMode && editJob && (
+
+                        <div
+                            style={{
+                                marginTop:
+                                    "14px",
+
+                                marginBottom:
+                                    "14px",
+
+                                padding:
+                                    "12px",
+
+                                background:
+                                    "#f5f5f5",
+
+                                borderRadius:
+                                    "8px",
+
+                                fontSize:
+                                    "14px",
+                            }}
+                        >
+
+                            <div>
+
+                                🆔 Job ID:{" "}
+
+                                <strong>
+                                    {
+                                        editJob.id
+                                    }
+                                </strong>
+
+                            </div>
+
+
+                            <div>
+
+                                📌 Trạng thái hiện tại:{" "}
+
+                                <strong>
+                                    {
+                                        editJob.status
+                                    }
+                                </strong>
+
+                            </div>
+
+
+                            {editJob.error && (
+
+                                <div
+                                    style={{
+                                        marginTop:
+                                            "6px",
+
+                                        color:
+                                            "#c62828",
+                                    }}
+                                >
+
+                                    🔴 Lỗi cũ:{" "}
+
+                                    {
+                                        editJob.error
+                                    }
+
+                                </div>
+
+                            )}
+
+                        </div>
+
+                    )}
 
 
                     <br />
 
 
-                    <PrimaryButton
-                        onClick={
-                            handleAddBulkToQueue
-                        }
-                        disabled={
-                            addingToQueue ||
-                            !selectedAccount ||
-                            selectedGroups.length ===
-                                0 ||
-                            images.length ===
-                                0 ||
-                            !content.trim()
-                        }
-                    >
-                        {addingToQueue
-                            ? "⏳ Đang tạo Queue..."
-                            : `➕ TẠO QUEUE CHO ${selectedGroups.length} NHÓM`}
-                    </PrimaryButton>
+                    {editMode ? (
+
+                        <div
+                            style={{
+                                display:
+                                    "flex",
+
+                                gap:
+                                    "10px",
+
+                                flexWrap:
+                                    "wrap",
+                            }}
+                        >
+
+                            <PrimaryButton
+                                onClick={
+                                    handleSaveEdit
+                                }
+
+                                disabled={
+                                    savingEdit ||
+                                    generatingAI ||
+                                    !content.trim()
+                                }
+                            >
+
+                                {savingEdit
+                                    ? "⏳ Đang lưu..."
+                                    : "💾 LƯU NỘI DUNG & QUAY LẠI QUEUE"}
+
+                            </PrimaryButton>
+
+
+                            <PrimaryButton
+                                onClick={
+                                    handleCancelEdit
+                                }
+
+                                disabled={
+                                    savingEdit
+                                }
+
+                                style={{
+                                    background:
+                                        "#777",
+                                }}
+                            >
+
+                                ↩️ Hủy sửa
+
+                            </PrimaryButton>
+
+                        </div>
+
+                    ) : (
+
+                        <PrimaryButton
+                            onClick={
+                                handleAddToQueue
+                            }
+
+                            disabled={
+                                addingToQueue ||
+                                !group ||
+                                allowedAccounts.length ===
+                                    0 ||
+                                !selectedAccountId ||
+                                images.length ===
+                                    0 ||
+                                !content.trim()
+                            }
+                        >
+
+                            {addingToQueue
+
+                                ? "⏳ Đang thêm vào Queue..."
+
+                                : "➕ THÊM VÀO QUEUE"}
+
+                        </PrimaryButton>
+
+                    )}
 
 
                     <div
@@ -1926,11 +2277,30 @@ function FacebookPostPreview() {
                         }}
                     >
 
-                        💡 Mỗi nhóm sẽ trở thành một
-                        Job riêng trong Queue. Sau đó
-                        Queue Worker sẽ xử lý tuần tự,
-                        không đăng đồng thời tất cả
-                        các nhóm.
+                        {editMode ? (
+
+                            <>
+                                💡 Sau khi lưu,
+                                Job cũ sẽ trở lại
+                                trạng thái{" "}
+                                <strong>
+                                    CHỜ XỬ LÝ
+                                </strong>{" "}
+                                và ông sẽ được đưa
+                                về đúng Job trong
+                                Facebook Queue.
+                            </>
+
+                        ) : (
+
+                            <>
+                                💡 Bài đăng sẽ được đưa
+                                vào hàng đợi. Hiện tại
+                                vẫn là Simulation, chưa
+                                đăng Facebook thật.
+                            </>
+
+                        )}
 
                     </div>
 
@@ -1939,7 +2309,9 @@ function FacebookPostPreview() {
             </SectionCard>
 
         </main>
+
     );
+
 }
 
 

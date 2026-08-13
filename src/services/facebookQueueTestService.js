@@ -1,26 +1,24 @@
 // =======================================
 // ToyotaSureHub
 // Facebook Queue Test Service
-// Version 1.2
+// Version 1.1
 // =======================================
 //
-// DEV ONLY
+// DEV ONLY.
 //
-// Tạo Job FAILED giả để test Error Handling.
+// Tạo một Job FAILED giả từ dữ liệu Queue hiện có
+// để kiểm tra Error Handling.
 //
-// QUAN TRỌNG:
-// Không dùng addToPostingQueue() vì hàm đó có
-// validation dữ liệu thật (ảnh, nội dung, quyền account).
-//
-// Test Job được ghi trực tiếp vào Queue.
 // Không gọi Facebook API.
 // Không đăng Facebook thật.
+//
 // =======================================
 
 import {
     loadPostingQueue,
-    savePostingQueue,
+    addToPostingQueue,
     updateQueueJob,
+    removeQueueJob,
 } from "./facebookPostingQueueService";
 
 
@@ -30,15 +28,20 @@ import {
 
 export const QUEUE_TEST_ERRORS = {
 
-    PERMISSION: "permission",
+    PERMISSION:
+        "permission",
 
-    ACCOUNT: "account",
+    ACCOUNT:
+        "account",
 
-    IMAGE: "image",
+    IMAGE:
+        "image",
 
-    CONTENT: "content",
+    CONTENT:
+        "content",
 
-    GROUP: "group",
+    GROUP:
+        "group",
 
 };
 
@@ -59,28 +62,12 @@ const ERROR_MESSAGES = {
         "Xe chưa có ảnh để đăng.",
 
     content:
-        "Nội dung Facebook đang trống.",
+        "Bài đăng chưa có nội dung Facebook.",
 
     group:
         "Hội nhóm Facebook không khả dụng.",
 
 };
-
-
-// =======================================
-// CREATE TEST JOB ID
-// =======================================
-
-function createTestJobId() {
-
-    return (
-        `test_${Date.now()}_` +
-        Math.random()
-            .toString(36)
-            .slice(2, 8)
-    );
-
-}
 
 
 // =======================================
@@ -92,34 +79,35 @@ export function createFacebookQueueTestJob(
         QUEUE_TEST_ERRORS.PERMISSION
 ) {
 
-    // --------------------------------------
-    // Validate error type
-    // --------------------------------------
-
     if (
         !Object.values(
             QUEUE_TEST_ERRORS
-        ).includes(errorType)
+        ).includes(
+            errorType
+        )
     ) {
 
         throw new Error(
             `Loại lỗi test không hợp lệ: ${errorType}`
         );
-
     }
 
-
-    // --------------------------------------
-    // Load current queue
-    // --------------------------------------
 
     const queue =
         loadPostingQueue();
 
 
-    // --------------------------------------
-    // Find a real job as template
-    // --------------------------------------
+    /**
+     * Ưu tiên lấy một Job hiện có
+     * để giữ nguyên carId / accountId / groupId thật.
+     *
+     * Như vậy khi test:
+     *
+     * 🔧 Sửa quyền
+     *
+     * hệ thống có thể mở đúng Account/Group
+     * thay vì dùng ID giả.
+     */
 
     const baseJob =
         queue.find(
@@ -136,165 +124,124 @@ export function createFacebookQueueTestJob(
         throw new Error(
             "Chưa có Job mẫu trong Queue. Hãy thêm ít nhất 1 bài vào Queue trước khi chạy Test Error."
         );
-
     }
 
 
-    const now =
-        new Date().toISOString();
+    const newJob =
+        addToPostingQueue({
+
+            carId:
+                baseJob.carId,
+
+            group:
+                baseJob.group,
+
+            content:
+                errorType ===
+                QUEUE_TEST_ERRORS.CONTENT
+                    ? ""
+                    : (
+                        baseJob.content ||
+                        "🧪 TEST FACEBOOK QUEUE"
+                    ),
+
+            imageCount:
+                errorType ===
+                QUEUE_TEST_ERRORS.IMAGE
+                    ? 0
+                    : (
+                        baseJob.imageCount ||
+                        1
+                    ),
+
+            accountId:
+                baseJob.accountId,
+
+        });
 
 
-    // --------------------------------------
-    // Create safe copy
-    // --------------------------------------
+    if (!newJob?.id) {
 
-    const testJob = {
+        throw new Error(
+            "Không tạo được Test Job."
+        );
+    }
 
-        ...baseJob,
 
-        id:
-            createTestJobId(),
+    /**
+     * Chuyển Job vừa tạo:
+     *
+     * waiting
+     *    ↓
+     * failed
+     */
 
-        status:
-            "failed",
+    const failedJob =
+        updateQueueJob(
 
-        error:
-            ERROR_MESSAGES[
-                errorType
-            ],
-
-        retryCount:
-            0,
-
-        result:
-            null,
-
-        testMode:
-            true,
-
-        testErrorType:
-            errorType,
-
-        createdAt:
-            now,
-
-        updatedAt:
-            now,
-
-        logs: [
-
-            ...(Array.isArray(
-                baseJob.logs
-            )
-                ? baseJob.logs
-                : []),
+            newJob.id,
 
             {
 
-                message:
-                    `🧪 DEV TEST: ${ERROR_MESSAGES[errorType]}`,
+                status:
+                    "failed",
 
-                timestamp:
-                    now,
+                error:
+                    ERROR_MESSAGES[
+                        errorType
+                    ],
 
-            },
+                retryCount:
+                    0,
 
-        ],
+                result:
+                    null,
 
-    };
+                testMode:
+                    true,
 
+                testErrorType:
+                    errorType,
 
-    // --------------------------------------
-    // Ghi trực tiếp vào Queue
-    //
-    // Không dùng addToPostingQueue()
-    // để Test Image / Content không bị
-    // validation chặn.
-    // --------------------------------------
+                updatedAt:
+                    new Date().toISOString(),
 
-    savePostingQueue([
+            }
 
-        ...queue,
-
-        testJob,
-
-    ]);
+        );
 
 
-    console.log(
-        "🧪 Facebook Queue Test Job Created:",
-        testJob
-    );
-
-
-    return testJob;
-
+    return failedJob;
 }
 
 
 // =======================================
-// RESET TEST JOB
+// REMOVE ALL TEST JOBS
 // =======================================
+//
+// Chỉ xóa Job có testMode === true.
+// Job thật không bị ảnh hưởng.
+//
 
-export function resetFacebookQueueTestJob(
-    jobId
-) {
+export function removeAllFacebookQueueTestJobs() {
 
     const queue =
         loadPostingQueue();
 
-
-    const job =
-        queue.find(
-            (item) =>
-                item.id === jobId
+    const testJobs =
+        queue.filter(
+            (job) =>
+                job &&
+                job.testMode === true
         );
 
-
-    if (!job) {
-
-        return null;
-
-    }
-
-
-    if (!job.testMode) {
-
-        throw new Error(
-            "Job này không phải Test Job."
-        );
-
-    }
-
-
-    return updateQueueJob(
-
-        jobId,
-
-        {
-
-            status:
-                "waiting",
-
-            error:
-                null,
-
-            retryCount:
-                0,
-
-            result:
-                null,
-
-            testMode:
-                false,
-
-            testErrorType:
-                null,
-
+    testJobs.forEach(
+        (job) => {
+            removeQueueJob(job.id);
         }
-
     );
 
+    return testJobs.length;
 }
 
 
@@ -307,7 +254,6 @@ export function getFacebookQueueTestTypes() {
     return [
 
         {
-
             type:
                 QUEUE_TEST_ERRORS.PERMISSION,
 
@@ -317,7 +263,6 @@ export function getFacebookQueueTestTypes() {
         },
 
         {
-
             type:
                 QUEUE_TEST_ERRORS.ACCOUNT,
 
@@ -327,7 +272,6 @@ export function getFacebookQueueTestTypes() {
         },
 
         {
-
             type:
                 QUEUE_TEST_ERRORS.IMAGE,
 
@@ -337,7 +281,6 @@ export function getFacebookQueueTestTypes() {
         },
 
         {
-
             type:
                 QUEUE_TEST_ERRORS.CONTENT,
 
@@ -347,7 +290,6 @@ export function getFacebookQueueTestTypes() {
         },
 
         {
-
             type:
                 QUEUE_TEST_ERRORS.GROUP,
 
@@ -357,5 +299,4 @@ export function getFacebookQueueTestTypes() {
         },
 
     ];
-
 }
