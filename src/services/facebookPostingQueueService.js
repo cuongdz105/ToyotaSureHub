@@ -266,6 +266,7 @@ export function savePostingQueue(
 // ==========================================
 
 export function addToPostingQueue({
+    campaignId = null,
     carId,
     group,
     content,
@@ -366,6 +367,17 @@ export function addToPostingQueue({
             },
 
         ],
+
+
+        // --------------------------------------
+        // CAMPAIGN
+        // --------------------------------------
+        // Job cũ không có campaignId vẫn chạy bình thường.
+        // Campaign mới sẽ truyền ID vào đây.
+        campaignId:
+            campaignId
+                ? String(campaignId)
+                : null,
 
 
         carId:
@@ -675,5 +687,83 @@ export function getQueueStats() {
                     "failed"
             ).length,
 
+    };
+}
+
+// ==========================================
+// CAMPAIGN JOBS
+// ==========================================
+// Trả về các Job thuộc một Campaign.
+// Job cũ không có campaignId sẽ không bị ảnh hưởng.
+//
+
+export function getCampaignJobs(
+    campaignId
+) {
+
+    if (!campaignId) {
+        return [];
+    }
+
+    const queue =
+        loadPostingQueue();
+
+    const id =
+        String(campaignId);
+
+    return queue.filter(
+        (job) =>
+            String(
+                job.campaignId || ""
+            ) === id
+    );
+}
+
+
+// ==========================================
+// CAMPAIGN QUEUE STATS
+// ==========================================
+
+export function getCampaignQueueStats(
+    campaignId
+) {
+
+    const jobs =
+        getCampaignJobs(
+            campaignId
+        );
+
+    return {
+
+        total:
+            jobs.length,
+
+        waiting:
+            jobs.filter(
+                (job) =>
+                    job.status ===
+                    "waiting"
+            ).length,
+
+        processing:
+            jobs.filter(
+                (job) =>
+                    job.status ===
+                    "processing"
+            ).length,
+
+        success:
+            jobs.filter(
+                (job) =>
+                    job.status ===
+                    "success"
+            ).length,
+
+        failed:
+            jobs.filter(
+                (job) =>
+                    job.status ===
+                    "failed"
+            ).length,
     };
 }

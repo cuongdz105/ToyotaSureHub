@@ -74,6 +74,181 @@ function FacebookGroups() {
 
   const postingCar = getCurrentPosting();
 
+  // ==========================================
+// FACEBOOK GROUP DUPLICATE GUARD
+// ==========================================
+
+function normalizeGroupUrl(value = "") {
+
+    let raw =
+        String(value || "").trim();
+
+    if (!raw) {
+        return "";
+    }
+
+    // Nếu người dùng nhập thiếu https://
+    if (!/^https?:\/\//i.test(raw)) {
+        raw =
+            `https://${raw}`;
+    }
+
+    try {
+
+        const urlObj =
+            new URL(raw);
+
+        let hostname =
+            urlObj.hostname
+                .toLowerCase()
+                .replace(/^www\./, "");
+
+        // Không phải Facebook
+        if (
+            hostname !== "facebook.com" &&
+            hostname !== "m.facebook.com"
+        ) {
+
+            return raw
+                .toLowerCase()
+                .replace(/\/+$/, "");
+        }
+
+        // Chuẩn hóa đường dẫn
+        let pathname =
+            urlObj.pathname
+                .replace(/\/+/g, "/")
+                .replace(/\/+$/, "")
+                .toLowerCase();
+
+        return (
+            `https://facebook.com${pathname}`
+        );
+
+    } catch {
+
+        return raw
+            .toLowerCase()
+            .replace(/\/+$/, "");
+    }
+}
+
+
+// ==========================================
+// LẤY FACEBOOK GROUP ID TỪ URL
+// ==========================================
+
+function extractFacebookGroupId(
+    value = ""
+) {
+
+    const normalized =
+        normalizeGroupUrl(value);
+
+    if (!normalized) {
+        return "";
+    }
+
+    const match =
+        normalized.match(
+            /facebook\.com\/groups\/([^/?#]+)/i
+        );
+
+    if (!match?.[1]) {
+        return "";
+    }
+
+    const identifier =
+        decodeURIComponent(
+            match[1]
+        ).trim();
+
+    // Group ID dạng số
+    if (/^\d+$/.test(identifier)) {
+        return identifier;
+    }
+
+    return "";
+}
+
+
+// ==========================================
+// TÌM GROUP BỊ TRÙNG
+// ==========================================
+
+function findDuplicateGroup(
+    candidateUrl,
+    excludeGroupId = null
+) {
+
+    const candidateNormalizedUrl =
+        normalizeGroupUrl(
+            candidateUrl
+        );
+
+    const candidateGroupId =
+        extractFacebookGroupId(
+            candidateUrl
+        );
+
+
+    return groups.find(
+        (group) => {
+
+            // Khi đang sửa một group,
+            // không coi chính nó là duplicate.
+            if (
+                excludeGroupId !== null &&
+                String(group.id) ===
+                    String(excludeGroupId)
+            ) {
+
+                return false;
+            }
+
+
+            // ==================================
+            // ƯU TIÊN KIỂM TRA GROUP ID
+            // ==================================
+
+            const existingGroupId =
+                group.facebookGroupId ||
+                extractFacebookGroupId(
+                    group.url
+                );
+
+
+            if (
+                candidateGroupId &&
+                existingGroupId &&
+                String(candidateGroupId) ===
+                    String(existingGroupId)
+            ) {
+
+                return true;
+            }
+
+
+            // ==================================
+            // FALLBACK: SO SÁNH URL CHUẨN HÓA
+            // ==================================
+
+            const existingNormalizedUrl =
+                normalizeGroupUrl(
+                    group.url
+                );
+
+
+            return (
+                candidateNormalizedUrl &&
+                existingNormalizedUrl &&
+                candidateNormalizedUrl ===
+                    existingNormalizedUrl
+            );
+        }
+    );
+}
+
   useEffect(() => {
     refreshData();
 
@@ -126,25 +301,152 @@ function FacebookGroups() {
    * ==========================================
    */
 
-  function handleAddGroup() {
-    if (!name.trim()) {
-      alert(
-        "Vui lòng nhập tên hội nhóm."
-      );
+  // ==========================================
+// THÊM HỘI NHÓM
+// ==========================================
 
-      return;
+function handleAddGroup() {
+
+    const cleanName =
+        name.trim();
+
+    const cleanUrl =
+        url.trim();
+
+
+    // ========================================
+    // KIỂM TRA TÊN
+    // ========================================
+
+    if (!cleanName) {
+
+        alert(
+            "⚠️ Vui lòng nhập tên hội nhóm."
+        );
+
+        return;
     }
 
+
+    // ========================================
+    // KIỂM TRA LINK
+    // ========================================
+
+    if (!cleanUrl) {
+
+        alert(
+            "⚠️ Vui lòng nhập Link Facebook Group."
+        );
+
+        return;
+    }
+
+
+    // ========================================
+    // KIỂM TRA GROUP TRÙNG
+    // ========================================
+
+    const duplicateGroup =
+        findDuplicateGroup(
+            cleanUrl
+        );
+
+
+    if (duplicateGroup) {
+
+        const duplicateId =
+            duplicateGroup.facebookGroupId ||
+            extractFacebookGroupId(
+                duplicateGroup.url
+            );
+
+
+        alert(
+
+            "⚠️ HỘI NHÓM ĐÃ TỒN TẠI!\n\n" +
+
+            `👥 ${duplicateGroup.name}\n` +
+
+            `🔗 ${
+                duplicateGroup.url ||
+                "(chưa có link)"
+            }\n` +
+
+            (
+                duplicateId
+                    ? `🆔 Group ID: ${duplicateId}\n`
+                    : ""
+            ) +
+
+            "\n" +
+
+            "ToyotaSureHub không tạo thêm nhóm trùng."
+        );
+
+
+        return;
+    }
+
+
+    // ========================================
+    // CHUẨN HÓA LINK
+    // ========================================
+
+    const normalizedUrl =
+        normalizeGroupUrl(
+            cleanUrl
+        );
+
+
+    const facebookGroupId =
+        extractFacebookGroupId(
+            cleanUrl
+        );
+
+
+    // ========================================
+    // THÊM GROUP
+    // ========================================
+
     addGroup({
-      name: name.trim(),
-      url: url.trim(),
+
+        name:
+            cleanName,
+
+        url:
+            normalizedUrl,
+
+        facebookGroupId:
+            facebookGroupId ||
+            null,
+
     });
 
+
+    // ========================================
+    // RESET FORM
+    // ========================================
+
     setName("");
+
     setUrl("");
 
+
+    // ========================================
+    // LOAD LẠI DANH SÁCH
+    // ========================================
+
     refreshData();
-  }
+
+
+    alert(
+
+        "✅ Đã thêm hội nhóm.\n\n" +
+
+        `👥 ${cleanName}`
+
+    );
+}
 
   /*
    * ==========================================
@@ -762,7 +1064,7 @@ function FacebookGroups() {
         </SectionCard>
       )}
 
-      {/* =====================================
+           {/* =====================================
           GỢI Ý NHÓM
       ====================================== */}
 
@@ -777,79 +1079,92 @@ function FacebookGroups() {
               với chiếc xe đang bán.
             </p>
 
-            {recommendedGroups.map(
-              (group) => (
-                <div
-                  key={group.id}
-                  style={{
-                    border:
-                      "1px solid #ddd",
-                    borderRadius:
-                      "10px",
-                    padding: "15px",
-                    marginBottom:
-                      "12px",
-                    background:
-                      selectedGroup?.id ===
-                        group.id
-                        ? "#fff8e1"
-                        : "#fff",
-                  }}
-                >
-                  <h3>
-                    👥{" "}
-                    {group.name}
-                  </h3>
-
-                  <p>
-                    ⭐ Độ phù hợp:{" "}
-                    <strong>
-                      {
-                        group.matchScore
-                      }
-                      %
-                    </strong>
-                  </p>
-
-                  <p>
-                    📌 Đã đăng:{" "}
-                    {
-                      group.totalPosts ||
-                      0
-                    }
-                  </p>
-
-                  <p>
-                    🟢 Trạng thái:{" "}
-                    {
-                      group.status ||
-                      "active"
-                    }
-                  </p>
-
-                  <p>
-  👤 Tài khoản:{" "}
-  <strong>
-    {
-      Array.isArray(group.accountIds)
-        ? group.accountIds.length
-        : 0
-    }
-  </strong>
-</p>
-
-                  <PrimaryButton
-                    onClick={() =>
-                      handleSelectGroup(
-                        group
-                      )
-                    }
+            {/* =================================
+                DANH SÁCH NHÓM GỢI Ý - CÓ CUỘN
+            ================================== */}
+            <div
+              style={{
+                maxHeight: "430px",
+                overflowY: "auto",
+                paddingRight: "6px",
+              }}
+            >
+              {recommendedGroups.map(
+                (group) => (
+                  <div
+                    key={group.id}
+                    style={{
+                      border:
+                        "1px solid #ddd",
+                      borderRadius:
+                        "10px",
+                      padding: "15px",
+                      marginBottom:
+                        "12px",
+                      background:
+                        selectedGroup?.id ===
+                          group.id
+                          ? "#fff8e1"
+                          : "#fff",
+                    }}
                   >
-                    👉 Chọn đăng
-                  </PrimaryButton>
-                </div>
-              )
-            )}
+                    <h3>
+                      👥{" "}
+                      {group.name}
+                    </h3>
+
+                    <p>
+                      ⭐ Độ phù hợp:{" "}
+                      <strong>
+                        {
+                          group.matchScore
+                        }
+                        %
+                      </strong>
+                    </p>
+
+                    <p>
+                      📌 Đã đăng:{" "}
+                      {
+                        group.totalPosts ||
+                        0
+                      }
+                    </p>
+
+                    <p>
+                      🟢 Trạng thái:{" "}
+                      {
+                        group.status ||
+                        "active"
+                      }
+                    </p>
+
+                    <p>
+                      👤 Tài khoản:{" "}
+                      <strong>
+                        {
+                          Array.isArray(
+                            group.accountIds
+                          )
+                            ? group.accountIds.length
+                            : 0
+                        }
+                      </strong>
+                    </p>
+
+                    <PrimaryButton
+                      onClick={() =>
+                        handleSelectGroup(
+                          group
+                        )
+                      }
+                    >
+                      👉 Chọn đăng
+                    </PrimaryButton>
+                  </div>
+                )
+              )}
+            </div>
           </SectionCard>
         )}
 
