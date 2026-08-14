@@ -56,6 +56,7 @@ function isAccountAllowedForGroup(
     account,
     group
 ) {
+
     if (
         !account ||
         !group
@@ -142,7 +143,6 @@ function validateAccountPermission(
         throw new Error(
             "Chưa chọn tài khoản Facebook."
         );
-
     }
 
 
@@ -151,7 +151,6 @@ function validateAccountPermission(
         throw new Error(
             "Chưa chọn hội nhóm."
         );
-
     }
 
 
@@ -172,7 +171,6 @@ function validateAccountPermission(
         throw new Error(
             `Không tìm thấy tài khoản Facebook với ID: ${accountId}`
         );
-
     }
 
 
@@ -184,7 +182,6 @@ function validateAccountPermission(
         throw new Error(
             `Tài khoản Facebook "${account.name}" hiện không hoạt động.`
         );
-
     }
 
 
@@ -200,7 +197,6 @@ function validateAccountPermission(
         throw new Error(
             `Tài khoản "${account.name}" không được phép đăng vào nhóm "${group.name}".`
         );
-
     }
 
 
@@ -230,9 +226,11 @@ export function loadPostingQueue() {
         const queue =
             JSON.parse(data);
 
+
         return Array.isArray(queue)
             ? queue
             : [];
+
 
     } catch (error) {
 
@@ -240,6 +238,7 @@ export function loadPostingQueue() {
             "Không đọc được Facebook Posting Queue:",
             error
         );
+
 
         return [];
     }
@@ -284,7 +283,6 @@ export function addToPostingQueue({
         throw new Error(
             "Chưa chọn hội nhóm."
         );
-
     }
 
 
@@ -293,7 +291,6 @@ export function addToPostingQueue({
         throw new Error(
             "Nội dung Facebook đang trống."
         );
-
     }
 
 
@@ -305,7 +302,6 @@ export function addToPostingQueue({
         throw new Error(
             "Bài đăng chưa có ảnh."
         );
-
     }
 
 
@@ -373,8 +369,10 @@ export function addToPostingQueue({
         // --------------------------------------
         // CAMPAIGN
         // --------------------------------------
+
         // Job cũ không có campaignId vẫn chạy bình thường.
         // Campaign mới sẽ truyền ID vào đây.
+
         campaignId:
             campaignId
                 ? String(campaignId)
@@ -427,29 +425,32 @@ export function addToPostingQueue({
         imageCount:
             Number(imageCount),
 
-variation:
-    variation
-        ? {
-            contentVariant:
-                Number(
-                    variation.contentVariant ||
-                    1
-                ),
 
-            imageIndexes:
-                Array.isArray(
-                    variation.imageIndexes
-                )
-                    ? variation.imageIndexes
-                    : [],
+        variation:
+            variation
+                ? {
 
-            imageCount:
-                Number(
-                    variation.imageCount ||
-                    imageCount
-                ),
-        }
-        : null,
+                    contentVariant:
+                        Number(
+                            variation.contentVariant ||
+                            1
+                        ),
+
+                    imageIndexes:
+                        Array.isArray(
+                            variation.imageIndexes
+                        )
+                            ? variation.imageIndexes
+                            : [],
+
+                    imageCount:
+                        Number(
+                            variation.imageCount ||
+                            imageCount
+                        ),
+
+                }
+                : null,
 
 
         status:
@@ -558,6 +559,377 @@ export function updateQueueJob(
 // ADD QUEUE LOG
 // ==========================================
 
+
+// ==========================================
+// MANUAL FACEBOOK FLOW
+// ==========================================
+//
+// Manual Flow KHÔNG gọi Posting Engine.
+//
+// WAITING
+//   ↓ chuẩn bị
+// MANUAL_READY
+//   ↓ người dùng xác nhận đã bấm Đăng trên Facebook
+// SUCCESS
+//
+// Tuyệt đối không tự đánh dấu SUCCESS khi chỉ mở Group.
+// ==========================================
+
+export function prepareManualPostingJob(jobId) {
+
+    const queue =
+        loadPostingQueue();
+
+
+    const job =
+        queue.find(
+            (item) =>
+                item.id ===
+                jobId
+        );
+
+
+    if (!job) {
+
+        throw new Error(
+            "Không tìm thấy bài đăng trong Queue."
+        );
+    }
+
+
+    if (
+        job.status !==
+        "waiting"
+    ) {
+
+        throw new Error(
+            `Job hiện đang ở trạng thái "${job.status}".`
+        );
+    }
+
+
+    const now =
+        new Date().toISOString();
+
+
+    const updatedQueue =
+        queue.map((item) => {
+
+            if (
+                item.id !==
+                jobId
+            ) {
+
+                return item;
+            }
+
+
+            return {
+
+                ...item,
+
+                status:
+                    "manual_ready",
+
+
+                error:
+                    null,
+
+
+                result: {
+
+                    mode:
+                        "manual",
+
+                    published:
+                        false,
+
+                    confirmedByUser:
+                        false,
+
+                    preparedAt:
+                        now,
+
+                },
+
+
+                logs: [
+
+                    ...(Array.isArray(item.logs)
+                        ? item.logs
+                        : []),
+
+                    {
+
+                        message:
+                            "🟠 Đã chuẩn bị bài — chờ ông đăng trên Facebook",
+
+                        timestamp:
+                            now,
+
+                    },
+
+                ],
+
+
+                updatedAt:
+                    now,
+
+            };
+
+        });
+
+
+    savePostingQueue(
+        updatedQueue
+    );
+
+
+    return updatedQueue.find(
+        (item) =>
+            item.id ===
+            jobId
+    );
+}
+
+
+// ==========================================
+// CONFIRM MANUAL POSTED
+// ==========================================
+
+export function confirmManualPosted(
+    jobId
+) {
+
+    const queue =
+        loadPostingQueue();
+
+
+    const job =
+        queue.find(
+            (item) =>
+                item.id ===
+                jobId
+        );
+
+
+    if (!job) {
+
+        throw new Error(
+            "Không tìm thấy bài đăng trong Queue."
+        );
+    }
+
+
+    if (
+        job.status !==
+        "manual_ready"
+    ) {
+
+        throw new Error(
+            "Job chưa ở trạng thái chờ xác nhận đăng Facebook."
+        );
+    }
+
+
+    const now =
+        new Date().toISOString();
+
+
+    const updatedQueue =
+        queue.map((item) => {
+
+            if (
+                item.id !==
+                jobId
+            ) {
+
+                return item;
+            }
+
+
+            return {
+
+                ...item,
+
+                status:
+                    "success",
+
+
+                error:
+                    null,
+
+
+                result: {
+
+                    ...(item.result || {}),
+
+                    mode:
+                        "manual",
+
+                    published:
+                        true,
+
+                    confirmedByUser:
+                        true,
+
+                    confirmedAt:
+                        now,
+
+                },
+
+
+                logs: [
+
+                    ...(Array.isArray(item.logs)
+                        ? item.logs
+                        : []),
+
+                    {
+
+                        message:
+                            "🟢 Ông đã xác nhận bài đăng Facebook thành công",
+
+                        timestamp:
+                            now,
+
+                    },
+
+                ],
+
+
+                updatedAt:
+                    now,
+
+            };
+
+        });
+
+
+    savePostingQueue(
+        updatedQueue
+    );
+
+
+    return updatedQueue.find(
+        (item) =>
+            item.id ===
+            jobId
+    );
+}
+
+
+// ==========================================
+// CANCEL MANUAL POSTING JOB
+// ==========================================
+
+export function cancelManualPostingJob(
+    jobId
+) {
+
+    const queue =
+        loadPostingQueue();
+
+
+    const job =
+        queue.find(
+            (item) =>
+                item.id ===
+                jobId
+        );
+
+
+    if (!job) {
+
+        throw new Error(
+            "Không tìm thấy bài đăng trong Queue."
+        );
+    }
+
+
+    if (
+        job.status !==
+        "manual_ready"
+    ) {
+
+        throw new Error(
+            "Job không ở trạng thái Manual Ready."
+        );
+    }
+
+
+    const now =
+        new Date().toISOString();
+
+
+    const updatedQueue =
+        queue.map((item) => {
+
+            if (
+                item.id !==
+                jobId
+            ) {
+
+                return item;
+            }
+
+
+            return {
+
+                ...item,
+
+                status:
+                    "waiting",
+
+
+                result:
+                    null,
+
+
+                logs: [
+
+                    ...(Array.isArray(item.logs)
+                        ? item.logs
+                        : []),
+
+                    {
+
+                        message:
+                            "↩️ Đưa Job về CHỜ ĐĂNG",
+
+                        timestamp:
+                            now,
+
+                    },
+
+                ],
+
+
+                updatedAt:
+                    now,
+
+            };
+
+        });
+
+
+    savePostingQueue(
+        updatedQueue
+    );
+
+
+    return updatedQueue.find(
+        (item) =>
+            item.id ===
+            jobId
+    );
+}
+
+
+// ==========================================
+// ADD QUEUE LOG
+// ==========================================
+
 export function addQueueLog(
     jobId,
     message
@@ -605,6 +977,7 @@ export function addQueueLog(
                     },
 
                 ],
+
 
                 updatedAt:
                     new Date().toISOString(),
@@ -697,6 +1070,14 @@ export function getQueueStats() {
             ).length,
 
 
+        manualReady:
+            queue.filter(
+                (job) =>
+                    job.status ===
+                    "manual_ready"
+            ).length,
+
+
         success:
             queue.filter(
                 (job) =>
@@ -715,9 +1096,11 @@ export function getQueueStats() {
     };
 }
 
+
 // ==========================================
 // CAMPAIGN JOBS
 // ==========================================
+//
 // Trả về các Job thuộc một Campaign.
 // Job cũ không có campaignId sẽ không bị ảnh hưởng.
 //
@@ -730,17 +1113,21 @@ export function getCampaignJobs(
         return [];
     }
 
+
     const queue =
         loadPostingQueue();
 
+
     const id =
         String(campaignId);
+
 
     return queue.filter(
         (job) =>
             String(
                 job.campaignId || ""
-            ) === id
+            ) ===
+            id
     );
 }
 
@@ -758,10 +1145,12 @@ export function getCampaignQueueStats(
             campaignId
         );
 
+
     return {
 
         total:
             jobs.length,
+
 
         waiting:
             jobs.filter(
@@ -770,12 +1159,22 @@ export function getCampaignQueueStats(
                     "waiting"
             ).length,
 
+
         processing:
             jobs.filter(
                 (job) =>
                     job.status ===
                     "processing"
             ).length,
+
+
+        manualReady:
+            jobs.filter(
+                (job) =>
+                    job.status ===
+                    "manual_ready"
+            ).length,
+
 
         success:
             jobs.filter(
@@ -784,11 +1183,13 @@ export function getCampaignQueueStats(
                     "success"
             ).length,
 
+
         failed:
             jobs.filter(
                 (job) =>
                     job.status ===
                     "failed"
             ).length,
+
     };
 }

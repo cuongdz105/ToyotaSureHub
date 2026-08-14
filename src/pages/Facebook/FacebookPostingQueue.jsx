@@ -10,13 +10,13 @@ import {
     removeQueueJob,
     clearPostingQueue,
     getQueueStats,
-    addQueueLog,
+    prepareManualPostingJob,
+    confirmManualPosted,
+    cancelManualPostingJob,
 } from "../../services/facebookPostingQueueService";
-
 
 import {
     processFacebookJob,
-    processFacebookQueue,
     getMaxRetries,
 } from "../../services/facebookPostingWorkerService";
 
@@ -89,6 +89,7 @@ function FacebookPostingQueue() {
         total: 0,
         waiting: 0,
         processing: 0,
+        manualReady: 0,
         success: 0,
         failed: 0,
     });
@@ -135,6 +136,190 @@ function FacebookPostingQueue() {
     }
 
 
+    function getValidCarImages(car) {
+        if (!car || !Array.isArray(car.images)) {
+            return [];
+        }
+
+        return car.images.filter((image) => {
+            if (typeof image === "string") {
+                return image.trim() !== "";
+            }
+
+            return Boolean(
+                image &&
+                typeof image === "object" &&
+                image.preview
+            );
+        });
+    }
+
+
+    function getImageSrc(image) {
+        if (typeof image === "string") {
+            return image;
+        }
+
+        return image?.preview || "";
+    }
+
+
+    function getPostingImages(job) {
+        const car = getCar(job);
+        const images = getValidCarImages(car);
+
+        if (images.length === 0) {
+            return [];
+        }
+
+        const indexes = Array.isArray(job.variation?.imageIndexes)
+            ? job.variation.imageIndexes
+                  .map((index) => Number(index))
+                  .filter(
+                      (index) =>
+                          Number.isInteger(index) &&
+                          index >= 0 &&
+                          index < images.length
+                  )
+            : [];
+
+        if (indexes.length === 0) {
+            return images.map((image, index) => ({
+                image,
+                originalIndex: index,
+            }));
+        }
+
+        return indexes.map((index) => ({
+            image: images[index],
+            originalIndex: index,
+        }));
+    }
+
+
+    async function handleCopyContent(job) {
+        try {
+            await navigator.clipboard.writeText(job.content || "");
+            alert("📋 Đã copy nội dung Facebook.");
+        } catch (error) {
+            console.error("Copy content error:", error);
+            alert("❌ Không copy được nội dung. Ông có thể bôi đen và copy thủ công.");
+        }
+    }
+
+
+    function handleOpenFacebook(job) {
+        const url = job.group?.url;
+
+        if (!url) {
+            alert("❌ Job chưa có link Facebook của nhóm.");
+            return;
+        }
+
+        window.open(url, "_blank", "noopener,noreferrer");
+    }
+
+
+    function handleOpenImage(image) {
+        const src = getImageSrc(image);
+
+        if (!src) {
+            return;
+        }
+
+        window.open(src, "_blank", "noopener,noreferrer");
+    }
+
+
+    function handleDownloadImage(image, job, index) {
+        const src = getImageSrc(image);
+
+        if (!src) {
+            return;
+        }
+
+        const link = document.createElement("a");
+        link.href = src;
+        link.download = `ToyotaSureHub_${job.id}_${index + 1}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+
+    async function handlePrepareManualJob(job) {
+        if (processing) {
+            return;
+        }
+
+        try {
+            const prepared = prepareManualPostingJob(job.id);
+
+            // Copy sẵn caption vào clipboard ngay từ thao tác của ông.
+            // Khi Facebook mở ra, ông chỉ cần Ctrl+V.
+            try {
+                await navigator.clipboard.writeText(job.content || "");
+            } catch (clipboardError) {
+                console.warn("Không copy được caption tự động:", clipboardError);
+            }
+
+            refresh();
+
+            if (prepared?.group?.url) {
+                window.open(
+                    prepared.group.url,
+                    "_blank",
+                    "noopener,noreferrer"
+                );
+            } else {
+                alert("⚠️ Đã chuẩn bị bài nhưng Job chưa có link Facebook của nhóm.");
+            }
+        } catch (error) {
+            console.error("Manual Prepare Error:", error);
+            alert(
+                "❌ Không thể chuẩn bị bài:\n\n" +
+                    (error?.message || "Lỗi không xác định.")
+            );
+            refresh();
+        }
+    }
+
+
+    function handleConfirmManualPosted(job) {
+        if (!window.confirm(
+            "Ông đã thực sự bấm Đăng trên Facebook chưa?\n\n" +
+            "Chỉ bấm OK nếu bài đã được gửi lên nhóm."
+        )) {
+            return;
+        }
+
+        try {
+            confirmManualPosted(job.id);
+            refresh();
+        } catch (error) {
+            console.error("Confirm Manual Posted Error:", error);
+            alert(
+                "❌ Không thể xác nhận:\n\n" +
+                    (error?.message || "Lỗi không xác định.")
+            );
+        }
+    }
+
+
+    function handleCancelManual(job) {
+        try {
+            cancelManualPostingJob(job.id);
+            refresh();
+        } catch (error) {
+            console.error("Cancel Manual Error:", error);
+            alert(
+                "❌ Không thể đưa Job về chờ:\n\n" +
+                    (error?.message || "Lỗi không xác định.")
+            );
+        }
+    }
+
+
     // ==========================================
     // REMOVE
     // ==========================================
@@ -173,246 +358,11 @@ function FacebookPostingQueue() {
     // PROCESS ONE
     // ==========================================
 
-    async function handleProcessJob(jobId) {
-
-    if (processing) {
-        return;
-    }
-
-    const currentQueue =
-        loadPostingQueue();
-
-    const job =
-        currentQueue.find(
-            (item) =>
-                item.id === jobId
-        );
-
-    if (!job) {
-
-        alert(
-            "Không tìm thấy Job."
-        );
-
-        return;
-    }
-
-
-    function handleManualPostSuccess(jobId) {
-
-    const job =
-        loadPostingQueue().find(
-            (item) =>
-                item.id === jobId
-        );
-
-    if (!job) {
-        return;
-    }
-
-
-    const confirmed =
-        window.confirm(
-            "Ông đã đăng bài này thành công trên Facebook chưa?"
-        );
-
-    if (!confirmed) {
-        return;
-    }
-
-
-    updateQueueJob(
-        jobId,
-        {
-            status:
-                "success",
-
-            error:
-                null,
-
-            result: {
-
-                ...(job.result || {}),
-
-                mode:
-                    "manual",
-
-                published:
-                    true,
-
-                confirmedByUser:
-                    true,
-
-                confirmedAt:
-                    new Date().toISOString(),
-
-            },
-        }
-    );
-
-
-    addQueueLog(
-        jobId,
-        "✅ Ông đã xác nhận bài đăng Facebook thành công."
-    );
-
-
-    refresh();
-}
-
-    // ======================================
-    // CHỈ CHO PHÉP XỬ LÝ JOB WAITING ĐẦU TIÊN
-    // ======================================
-
-    const firstWaitingJob =
-        currentQueue.find(
-            (item) =>
-                item.status ===
-                "waiting"
-        );
-
-    if (
-        firstWaitingJob &&
-        firstWaitingJob.id !==
-            job.id
+    async function handleProcessJob(
+        jobId
     ) {
 
-        alert(
-            "⏳ Hãy xử lý Job đang đứng trước trước."
-        );
-
-        document
-            .getElementById(
-                `queue-job-${firstWaitingJob.id}`
-            )
-            ?.scrollIntoView({
-                behavior: "smooth",
-                block: "center",
-            });
-
-        return;
-    }
-
-
-    try {
-
-        setProcessing(true);
-
-
-        // ======================================
-        // KIỂM TRA GROUP
-        // ======================================
-
-        const groupUrl =
-            job.group?.url ||
-            "";
-
-        if (!groupUrl) {
-
-            throw new Error(
-                "Job chưa có URL Facebook của hội nhóm."
-            );
-        }
-
-
-        // ======================================
-        // CHUYỂN SANG MANUAL READY
-        // ======================================
-
-        updateQueueJob(
-            job.id,
-            {
-                status:
-                    "manual_ready",
-
-                error:
-                    null,
-
-                result: {
-
-                    mode:
-                        "manual",
-
-                    prepared:
-                        true,
-
-                    preparedAt:
-                        new Date().toISOString(),
-
-                },
-            }
-        );
-
-
-        // ======================================
-        // LOG
-        // ======================================
-
-        addQueueLog(
-            job.id,
-            "🟠 Đã chuẩn bị bài — chờ đăng thủ công trên Facebook."
-        );
-
-
-        // ======================================
-        // MỞ TAB FACEBOOK
-        //
-        // Tên window cố định để tái sử dụng
-        // cùng một tab Facebook.
-        // ======================================
-
-        window.open(
-            groupUrl,
-            "toyota_facebook_posting"
-        );
-
-
-        refresh();
-
-    } catch (error) {
-
-        console.error(
-            "❌ Không thể chuẩn bị Manual Job:",
-            error
-        );
-
-        updateQueueJob(
-            job.id,
-            {
-                status:
-                    "failed",
-
-                error:
-                    error?.message ||
-                    "Không thể chuẩn bị bài đăng.",
-            }
-        );
-
-        refresh();
-
-        alert(
-            error?.message ||
-            "Không thể chuẩn bị bài đăng."
-        );
-
-    } finally {
-
-        setProcessing(false);
-
-    }
-}
-
-
-    // ==========================================
-    // PROCESS ALL
-    // ==========================================
-
-    async function handleProcessAll() {
-
-        if (
-            processing ||
-            queue.length === 0
-        ) {
+        if (processing) {
             return;
         }
 
@@ -420,58 +370,69 @@ function FacebookPostingQueue() {
 
             setProcessing(true);
 
-            const results =
-                await processFacebookQueue();
+            await processFacebookJob(
+                jobId
+            );
 
             refresh();
-
-            const successCount =
-                results.filter(
-                    (item) =>
-                        item?.status ===
-                        "success"
-                ).length;
-
-            const failedCount =
-                results.filter(
-                    (item) =>
-                        item?.status ===
-                        "failed"
-                ).length;
-
-            const waitingCount =
-                loadPostingQueue().filter(
-                    (item) =>
-                        item.status ===
-                        "waiting"
-                ).length;
-
-            alert(
-                "🚀 Queue đã xử lý xong!\n\n" +
-                `🟢 Thành công: ${successCount}\n` +
-                `🔴 Thất bại: ${failedCount}\n` +
-                `🟡 Còn chờ: ${waitingCount}`
-            );
 
         } catch (error) {
 
             console.error(
-                "Queue Worker Error:",
+                "Process Job Error:",
                 error
             );
 
-            alert(
-                "❌ Queue Worker lỗi:\n\n" +
-                (
-                    error?.message ||
-                    "Lỗi không xác định."
-                )
-            );
+            refresh();
 
         } finally {
 
             setProcessing(false);
 
+            refresh();
+        }
+    }
+
+
+    // ==========================================
+    // PREPARE ALL FOR MANUAL POSTING
+    // ==========================================
+
+    function handlePrepareAllManual() {
+        if (processing || waitingJobs.length === 0) {
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `Chuẩn bị ${waitingJobs.length} bài để ông đăng thủ công trên Facebook?\n\n` +
+            "ToyotaSureHub sẽ KHÔNG tự đánh dấu thành công và KHÔNG tự bấm Đăng Facebook."
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            setProcessing(true);
+
+            waitingJobs.forEach((job) => {
+                prepareManualPostingJob(job.id);
+            });
+
+            refresh();
+
+            alert(
+                `🟠 Đã chuẩn bị ${waitingJobs.length} bài.\n\n` +
+                "Ông mở từng Job, copy nội dung/chọn ảnh và đăng trên Facebook."
+            );
+        } catch (error) {
+            console.error("Prepare All Manual Error:", error);
+            alert(
+                "❌ Không thể chuẩn bị Queue:\n\n" +
+                    (error?.message || "Lỗi không xác định.")
+            );
+        } finally {
+            setProcessing(false);
             refresh();
         }
     }
@@ -943,6 +904,9 @@ function FacebookPostingQueue() {
             case "processing":
                 return "🔵 Đang xử lý";
 
+            case "manual_ready":
+                return "🟠 Chờ ông đăng Facebook";
+
             case "success":
                 return "🟢 Thành công";
 
@@ -971,6 +935,13 @@ function FacebookPostingQueue() {
             (job) =>
                 job.status ===
                 "failed"
+        );
+
+    const manualReadyJobs =
+        queue.filter(
+            (job) =>
+                job.status ===
+                "manual_ready"
         );
 
 
@@ -1066,7 +1037,7 @@ function FacebookPostingQueue() {
 
                     <PrimaryButton
                         onClick={
-                            handleProcessAll
+                            handlePrepareAllManual
                         }
                         disabled={
                             processing ||
@@ -1075,8 +1046,8 @@ function FacebookPostingQueue() {
                         }
                     >
                         {processing
-                            ? "⏳ Worker đang chạy..."
-                            : `🚀 Chạy ${waitingJobs.length} bài`}
+                            ? "⏳ Đang chuẩn bị..."
+                            : `🟠 Chuẩn bị ${waitingJobs.length} bài`}
                     </PrimaryButton>
 
                 </div>
@@ -1123,6 +1094,13 @@ function FacebookPostingQueue() {
                         🔵 Đang xử lý:{" "}
                         <strong>
                             {stats.processing}
+                        </strong>
+                    </div>
+
+                    <div>
+                        🟠 Chờ đăng:{" "}
+                        <strong>
+                            {stats.manualReady ?? manualReadyJobs.length}
                         </strong>
                     </div>
 
@@ -1202,11 +1180,11 @@ function FacebookPostingQueue() {
 
                 ⚠️{" "}
                 <strong>
-                    Chế độ mô phỏng:
+                    Manual Posting V11:
                 </strong>{" "}
 
-                Posting Engine hiện chưa đăng
-                Facebook thật.
+                ToyotaSureHub chỉ chuẩn bị nội dung + đúng bộ ảnh + mở đúng nhóm.
+                Ông phải tự bấm <strong>Đăng</strong> trên Facebook rồi mới xác nhận thành công.
 
             </div>
 
@@ -1399,63 +1377,56 @@ function FacebookPostingQueue() {
                                                 "12px",
 
                                             display:
-                                                "flex",
+                                                "grid",
 
-                                            alignItems:
-                                                "center",
+                                            gridTemplateColumns:
+                                                "repeat(auto-fit, minmax(220px, 1fr))",
 
                                             gap:
-                                                "14px",
-
-                                            flexWrap:
-                                                "wrap",
-
-                                            fontSize:
-                                                "14px",
-
-                                            color:
-                                                "#666",
+                                                "8px",
                                         }}
                                     >
 
                                         <div>
-                                            👤{" "}
-                                            <strong
-                                                style={{
-                                                    color:
-                                                        "#444",
-                                                }}
-                                            >
-                                                {job.accountName ||
+                                            🆔 Car ID:{" "}
+                                            <strong>
+                                                {
+                                                    job.carId ||
+                                                    "-"
+                                                }
+                                            </strong>
+                                        </div>
+
+
+                                        <div>
+                                            👤 Account ID:{" "}
+                                            <strong>
+                                                {
                                                     job.accountId ||
-                                                    "Tài khoản không rõ"}
+                                                    "-"
+                                                }
                                             </strong>
                                         </div>
 
 
                                         <div>
-                                            👥{" "}
-                                            <strong
-                                                style={{
-                                                    color:
-                                                        "#444",
-                                                }}
-                                            >
-                                                {job.group?.name ||
-                                                    "Không rõ nhóm"}
+                                            👥 Nhóm:{" "}
+                                            <strong>
+                                                {
+                                                    job.group?.name ||
+                                                    "-"
+                                                }
                                             </strong>
                                         </div>
 
 
                                         <div>
-                                            📷{" "}
-                                            <strong
-                                                style={{
-                                                    color:
-                                                        "#444",
-                                                }}
-                                            >
-                                                {job.imageCount || 0}
+                                            📷 Ảnh:{" "}
+                                            <strong>
+                                                {
+                                                    job.imageCount ||
+                                                    0
+                                                }
                                             </strong>
                                         </div>
 
@@ -1658,6 +1629,188 @@ function FacebookPostingQueue() {
 
 
                                     {/* =========================
+                                        MANUAL POSTING PANEL
+                                    ========================= */}
+
+                                    {job.status === "manual_ready" && (() => {
+                                        const postingImages = getPostingImages(job);
+
+                                        return (
+                                            <div
+                                                style={{
+                                                    marginTop: "14px",
+                                                    padding: "15px",
+                                                    background: "#fff8e1",
+                                                    border: "2px solid #f0c36d",
+                                                    borderRadius: "10px",
+                                                }}
+                                            >
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        justifyContent: "space-between",
+                                                        alignItems: "center",
+                                                        gap: "10px",
+                                                        flexWrap: "wrap",
+                                                        marginBottom: "12px",
+                                                    }}
+                                                >
+                                                    <strong style={{ fontSize: "16px" }}>
+                                                        🟠 CHỜ ÔNG ĐĂNG FACEBOOK
+                                                    </strong>
+
+                                                    <span style={{ color: "#795548", fontSize: "13px" }}>
+                                                        ToyotaSureHub chưa coi đây là thành công.
+                                                    </span>
+                                                </div>
+
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        gap: "8px",
+                                                        flexWrap: "wrap",
+                                                        marginBottom: "12px",
+                                                    }}
+                                                >
+                                                    <PrimaryButton
+                                                        onClick={() => handleOpenFacebook(job)}
+                                                    >
+                                                        🌐 Mở lại Facebook
+                                                    </PrimaryButton>
+
+                                                    <PrimaryButton
+                                                        onClick={() => handleCopyContent(job)}
+                                                    >
+                                                        📋 Copy nội dung
+                                                    </PrimaryButton>
+                                                </div>
+
+                                                <div
+                                                    style={{
+                                                        padding: "12px",
+                                                        background: "#fff",
+                                                        border: "1px solid #ddd",
+                                                        borderRadius: "8px",
+                                                        whiteSpace: "pre-wrap",
+                                                        lineHeight: "1.55",
+                                                        maxHeight: "260px",
+                                                        overflowY: "auto",
+                                                    }}
+                                                >
+                                                    {job.content || "(Không có nội dung)"}
+                                                </div>
+
+                                                <div style={{ marginTop: "14px", marginBottom: "8px" }}>
+                                                    📷 <strong>Bộ ảnh đăng ({postingImages.length} ảnh)</strong>
+                                                    {job.variation?.imageIndexes?.length > 0 && (
+                                                        <span style={{ marginLeft: "8px", color: "#777", fontSize: "13px" }}>
+                                                            · Đã khóa theo Variation của Job
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <div
+                                                    style={{
+                                                        display: "grid",
+                                                        gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
+                                                        gap: "10px",
+                                                    }}
+                                                >
+                                                    {postingImages.map(({ image }, imageIndex) => {
+                                                        const src = getImageSrc(image);
+
+                                                        return (
+                                                            <div
+                                                                key={`${job.id}-manual-image-${imageIndex}`}
+                                                                style={{
+                                                                    border: "1px solid #ddd",
+                                                                    borderRadius: "8px",
+                                                                    padding: "6px",
+                                                                    background: "#fff",
+                                                                }}
+                                                            >
+                                                                <img
+                                                                    src={src}
+                                                                    alt={`Ảnh ${imageIndex + 1}`}
+                                                                    style={{
+                                                                        width: "100%",
+                                                                        height: "110px",
+                                                                        objectFit: "cover",
+                                                                        borderRadius: "6px",
+                                                                        display: "block",
+                                                                        cursor: "pointer",
+                                                                    }}
+                                                                    onClick={() => handleOpenImage(image)}
+                                                                />
+
+                                                                <div
+                                                                    style={{
+                                                                        fontSize: "12px",
+                                                                        marginTop: "5px",
+                                                                        textAlign: "center",
+                                                                        color: "#666",
+                                                                    }}
+                                                                >
+                                                                    Ảnh {imageIndex + 1}
+                                                                </div>
+
+                                                                <PrimaryButton
+                                                                    onClick={() => handleDownloadImage(image, job, imageIndex)}
+                                                                    style={{
+                                                                        width: "100%",
+                                                                        marginTop: "5px",
+                                                                        padding: "6px 8px",
+                                                                        fontSize: "12px",
+                                                                    }}
+                                                                >
+                                                                    ⬇️ Tải ảnh
+                                                                </PrimaryButton>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+
+                                                <div
+                                                    style={{
+                                                        marginTop: "14px",
+                                                        padding: "10px",
+                                                        background: "#fff3cd",
+                                                        border: "1px solid #ffe69c",
+                                                        borderRadius: "8px",
+                                                        fontSize: "13px",
+                                                    }}
+                                                >
+                                                    ⚠️ Sau khi Facebook thực sự hiện bài trong nhóm, ông mới bấm
+                                                    <strong> "Đã đăng thành công"</strong>.
+                                                </div>
+
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        gap: "8px",
+                                                        flexWrap: "wrap",
+                                                        marginTop: "12px",
+                                                    }}
+                                                >
+                                                    <PrimaryButton
+                                                        onClick={() => handleConfirmManualPosted(job)}
+                                                    >
+                                                        ✅ Đã đăng thành công
+                                                    </PrimaryButton>
+
+                                                    <PrimaryButton
+                                                        onClick={() => handleCancelManual(job)}
+                                                        style={{ background: "#777" }}
+                                                    >
+                                                        ↩️ Chưa đăng / Để sau
+                                                    </PrimaryButton>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+
+
+                                    {/* =========================
                                         LOG
                                     ========================= */}
 
@@ -1818,10 +1971,11 @@ function FacebookPostingQueue() {
                                             🟢 Job hoàn tất.
 
                                             {
-                                                job.result?.published ===
-                                                true
-                                                    ? " Đã đăng Facebook thật."
-                                                    : " Đây là kết quả Simulation."
+                                                job.result?.confirmedByUser === true
+                                                    ? " Ông đã xác nhận đã đăng Facebook."
+                                                    : job.result?.published === true
+                                                        ? " Đã ghi nhận đã đăng Facebook."
+                                                        : " Chưa có xác nhận đăng Facebook."
                                             }
 
                                         </div>
@@ -1857,8 +2011,8 @@ function FacebookPostingQueue() {
 
                                             <PrimaryButton
                                                 onClick={() =>
-                                                    handleProcessJob(
-                                                        job.id
+                                                    handlePrepareManualJob(
+                                                        job
                                                     )
                                                 }
                                                 disabled={
@@ -1871,19 +2025,21 @@ function FacebookPostingQueue() {
                                         )}
 
 
-{job.status === "manual_ready" && (
+                                        {job.status ===
+                                            "manual_ready" && (
 
-    <PrimaryButton
-        onClick={() =>
-            handleManualPostSuccess(
-                job.id
-            )
-        }
-    >
-        ✅ Đã đăng thành công
-    </PrimaryButton>
+                                            <PrimaryButton
+                                                onClick={() =>
+                                                    handleOpenFacebook(
+                                                        job
+                                                    )
+                                                }
+                                            >
+                                                🌐 Mở Facebook
+                                            </PrimaryButton>
 
-)}
+                                        )}
+
 
                                         {job.status ===
                                             "failed" && (
@@ -1928,69 +2084,6 @@ function FacebookPostingQueue() {
 
                                     </div>
 
-
-                                    {/* =========================
-                                        DEBUG INFO
-                                        ID vẫn giữ lại để kiểm tra
-                                        nhưng ẩn khỏi giao diện chính.
-                                    ========================= */}
-
-                                    <details
-                                        style={{
-                                            marginTop:
-                                                "10px",
-
-                                            fontSize:
-                                                "12px",
-
-                                            color:
-                                                "#888",
-                                        }}
-                                    >
-                                        <summary
-                                            style={{
-                                                cursor:
-                                                    "pointer",
-
-                                                userSelect:
-                                                    "none",
-                                            }}
-                                        >
-                                            🔎 Thông tin kỹ thuật
-                                        </summary>
-
-                                        <div
-                                            style={{
-                                                marginTop:
-                                                    "8px",
-
-                                                padding:
-                                                    "8px 10px",
-
-                                                background:
-                                                    "#f7f7f7",
-
-                                                border:
-                                                    "1px solid #e5e5e5",
-
-                                                borderRadius:
-                                                    "7px",
-
-                                                lineHeight:
-                                                    1.7,
-                                            }}
-                                        >
-                                            Car ID:{" "}
-                                            {job.carId || "-"}
-                                            {" · "}
-                                            Account ID:{" "}
-                                            {job.accountId || "-"}
-                                            {" · "}
-                                            Job ID:{" "}
-                                            {job.id}
-                                        </div>
-                                    </details>
-
                                 </div>
                             );
                         }
@@ -2028,15 +2121,19 @@ function FacebookPostingQueue() {
                     >
 
                         <PrimaryButton
-    onClick={
-        handleNextJob
-    }
-    disabled={
-        waitingJobs.length === 0
-    }
->
-    ▶️ Xử lý bài tiếp theo
-</PrimaryButton>
+                            onClick={
+                                handlePrepareAllManual
+                            }
+                            disabled={
+                                processing ||
+                                waitingJobs.length ===
+                                    0
+                            }
+                        >
+                            {processing
+                                ? "⏳ Đang chuẩn bị..."
+                                : `🟠 Chuẩn bị ${waitingJobs.length} bài`}
+                        </PrimaryButton>
 
 
                         <PrimaryButton
