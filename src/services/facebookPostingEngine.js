@@ -332,6 +332,112 @@ function getCarImages(car) {
 
 
 // ==========================================
+// BUILD POSTING IMAGES FROM VARIATION
+// ==========================================
+//
+// Không thay đổi car.images gốc.
+// Chỉ tạo một mảng ảnh riêng cho Job.
+//
+// Nếu Job có variation.imageIndexes:
+// → lấy đúng ảnh theo thứ tự đã được Campaign
+//   tạo trước đó.
+//
+// Nếu không có variation:
+// → giữ nguyên thứ tự ảnh gốc.
+//
+// ==========================================
+
+function buildPostingImages(
+    images,
+    variation
+) {
+
+    if (
+        !Array.isArray(images) ||
+        images.length === 0
+    ) {
+
+        return {
+            images: [],
+            indexes: [],
+            usedVariation: false,
+        };
+    }
+
+
+    const indexes =
+        Array.isArray(
+            variation?.imageIndexes
+        )
+            ? variation.imageIndexes
+                .map(
+                    (index) =>
+                        Number(index)
+                )
+                .filter(
+                    (index) =>
+                        Number.isInteger(
+                            index
+                        ) &&
+                        index >= 0 &&
+                        index < images.length
+                )
+            : [];
+
+
+    // --------------------------------------
+    // Không có Variation
+    // --------------------------------------
+
+    if (
+        indexes.length === 0
+    ) {
+
+        return {
+
+            images: [
+                ...images
+            ],
+
+            indexes:
+                images.map(
+                    (_, index) =>
+                        index
+                ),
+
+            usedVariation:
+                false,
+        };
+    }
+
+
+    // --------------------------------------
+    // Có Variation
+    //
+    // Giữ đúng thứ tự Campaign đã tạo.
+    // --------------------------------------
+
+    const postingImages =
+        indexes.map(
+            (index) =>
+                images[index]
+        );
+
+
+    return {
+
+        images:
+            postingImages,
+
+        indexes:
+            indexes,
+
+        usedVariation:
+            true,
+    };
+}
+
+// ==========================================
 // VALIDATE POST DATA
 // ==========================================
 
@@ -507,7 +613,7 @@ export async function runFacebookPostingEngine(
     );
 
 
-    // ======================================
+        // ======================================
     // 4. KIỂM TRA ẢNH THẬT
     // ======================================
 
@@ -515,7 +621,6 @@ export async function runFacebookPostingEngine(
         getCarImages(
             car
         );
-
 
     if (
         images.length === 0
@@ -527,6 +632,26 @@ export async function runFacebookPostingEngine(
     }
 
 
+    // ======================================
+    // 4B. BUILD VARIATION IMAGES
+    // ======================================
+
+    const postingImageResult =
+        buildPostingImages(
+            images,
+            job.variation
+        );
+
+    const postingImages =
+        postingImageResult.images;
+
+    const postingImageIndexes =
+        postingImageResult.indexes;
+
+    const usedImageVariation =
+        postingImageResult.usedVariation;
+
+
     logs.push(
         createLog(
             `📷 Đã kiểm tra ${images.length} ảnh`,
@@ -534,6 +659,32 @@ export async function runFacebookPostingEngine(
         )
     );
 
+
+    if (
+        usedImageVariation
+    ) {
+
+        logs.push(
+            createLog(
+                `🎨 Variation ảnh: ${postingImageIndexes
+                    .map(
+                        (index) =>
+                            index + 1
+                    )
+                    .join(" → ")}`,
+                "info"
+            )
+        );
+
+    } else {
+
+        logs.push(
+            createLog(
+                "🎨 Không có Variation ảnh — dùng thứ tự ảnh gốc",
+                "info"
+            )
+        );
+    }
 
     // ======================================
     // 5. KIỂM TRA NỘI DUNG
@@ -547,22 +698,21 @@ export async function runFacebookPostingEngine(
     );
 
 
-    // ======================================
+      // ======================================
     // 6. KIỂM TRA IMAGE COUNT
     // ======================================
 
     if (
         Number(job.imageCount) !==
-        images.length
+        postingImages.length
     ) {
 
         logs.push(
             createLog(
-                `⚠️ Queue ghi ${job.imageCount} ảnh, thực tế xe có ${images.length} ảnh`,
+                `⚠️ Queue ghi ${job.imageCount} ảnh, Variation thực tế dùng ${postingImages.length} ảnh`,
                 "warning"
             )
         );
-
     }
 
 
@@ -581,9 +731,9 @@ export async function runFacebookPostingEngine(
     await delay(500);
 
 
-    logs.push(
+        logs.push(
         createLog(
-            `📷 Đã chuẩn bị xong ${images.length} ảnh`,
+            `📷 Đã chuẩn bị xong ${postingImages.length} ảnh`,
             "success"
         )
     );
@@ -785,7 +935,13 @@ export async function runFacebookPostingEngine(
 
 
             imageCount:
-                images.length,
+    postingImages.length,
+
+imageIndexes:
+    postingImageIndexes,
+
+usedImageVariation:
+    usedImageVariation,
 
 
             logs,

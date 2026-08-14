@@ -223,14 +223,14 @@ function createGroupSnapshot(
 // ==========================================
 
 export function createCampaign({
-
     car,
     account,
     selectedGroups = [],
     content = "",
     imageCount = 0,
-
+    variationPlan = [],
 }) {
+
 
     if (!car?.id) {
 
@@ -349,6 +349,33 @@ export function createCampaign({
                 imageCount || 0
             ),
 
+
+            // ------------------------------
+// VARIATION PLAN
+// ------------------------------
+// Kế hoạch variation được khóa ngay
+// khi Campaign được tạo.
+// Queue/Retry không random lại.
+
+variationMode:
+    "smart",
+
+variationPlan:
+    Array.isArray(variationPlan)
+        ? variationPlan.map(
+            (item) => ({
+                ...item,
+                imageIndexes:
+                    Array.isArray(
+                        item?.imageIndexes
+                    )
+                        ? [
+                            ...item.imageIndexes
+                        ]
+                        : [],
+            })
+        )
+        : [],
 
         // ----------------------------------
         // PROGRESS

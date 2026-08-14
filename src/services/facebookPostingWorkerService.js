@@ -14,9 +14,6 @@ import {
 
 import {
     getRateControllerConfig,
-    getBatchSize,
-    waitBetweenJobs,
-    waitBetweenBatches,
 } from "./facebookRateControllerService";
 
 /**
@@ -932,25 +929,7 @@ export async function processFacebookQueue() {
          * Job đầu tiên chạy ngay.
          */
 
-        if (
-            index > 0
-        ) {
-
-            addQueueLog(
-                job.id,
-
-                "⏱️ Rate Controller: chờ trước khi xử lý Job tiếp theo"
-            );
-
-
-            await waitBetweenJobs({
-
-                simulation:
-                    true,
-            });
-        }
-
-
+        
         /**
          * ===============================
          * Xử lý Job
@@ -1009,53 +988,7 @@ export async function processFacebookQueue() {
         }
 
 
-        /**
-         * ===============================
-         * Kiểm tra Batch
-         * ===============================
-         */
-
-        const completedCount =
-            index + 1;
-
-
-        const isBatchEnd =
-            completedCount %
-                batchSize ===
-            0;
-
-
-        const hasMoreJobs =
-            index <
-            waitingJobs.length - 1;
-
-
-        /**
-         * ===============================
-         * Nghỉ giữa Batch
-         * ===============================
-         */
-
-        if (
-            isBatchEnd &&
-            hasMoreJobs
-        ) {
-
-            const nextJob =
-                waitingJobs[
-                    index + 1
-                ];
-
-
-            addQueueLog(
-                nextJob.id,
-
-                "⏸️ Rate Controller: nghỉ giữa các batch"
-            );
-
-
-            await waitBetweenBatches();
-        }
+              
     }
 
 

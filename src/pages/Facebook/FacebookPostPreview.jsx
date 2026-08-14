@@ -1075,13 +1075,213 @@ function handleClearSelectedGroups() {
                 true
             );
 
+// ==========================================
+// VARIATION ENGINE V1
+// ==========================================
+//
+// Mục tiêu:
+// - Mỗi Job có kế hoạch ảnh riêng.
+// - Không random lại khi Retry.
+// - Không thay đổi ảnh gốc của xe.
+// - Content variant trước mắt là slot,
+//   sau này nối AI Content Variant Engine.
+// ==========================================
+
+function createSeededRandom(seed) {
+
+    let value = seed;
+
+    return function () {
+
+        value =
+            (value * 9301 + 49297) %
+            233280;
+
+        return value / 233280;
+    };
+}
+
+
+function shuffleIndexes(
+    count,
+    seed
+) {
+
+    const indexes =
+        Array.from(
+            { length: count },
+            (_, index) => index
+        );
+
+    const random =
+        createSeededRandom(seed);
+
+
+    for (
+        let i = indexes.length - 1;
+        i > 0;
+        i--
+    ) {
+
+        const j =
+            Math.floor(
+                random() * (i + 1)
+            );
+
+        [
+            indexes[i],
+            indexes[j],
+        ] = [
+            indexes[j],
+            indexes[i],
+        ];
+    }
+
+
+    return indexes;
+}
+
+
+function createVariationPlan(
+    groups,
+    imageTotal,
+    campaignSeed = Date.now()
+) {
+
+    if (
+        !Array.isArray(groups) ||
+        groups.length === 0
+    ) {
+        return [];
+    }
+
+
+    if (
+        !imageTotal ||
+        imageTotal <= 0
+    ) {
+        return [];
+    }
+
+
+    return groups.map(
+        (group, index) => {
+
+            // ----------------------------------
+            // Số ảnh:
+            // giữ trong khoảng 70–100% ảnh gốc
+            // nhưng tối thiểu 6 nếu xe có >= 6 ảnh.
+            // ----------------------------------
+
+            const minimumImages =
+                imageTotal >= 6
+                    ? 6
+                    : imageTotal;
+
+
+            const variationSeed =
+                Number(
+                    campaignSeed
+                ) +
+                index * 7919;
+
+
+            const random =
+                createSeededRandom(
+                    variationSeed
+                );
+
+
+            let imageCount =
+                minimumImages;
+
+
+            if (
+                imageTotal >
+                minimumImages
+            ) {
+
+                const range =
+                    imageTotal -
+                    minimumImages +
+                    1;
+
+                imageCount =
+                    minimumImages +
+                    Math.floor(
+                        random() *
+                        range
+                    );
+            }
+
+
+            // ----------------------------------
+            // Thứ tự ảnh
+            // ----------------------------------
+
+            let imageIndexes =
+                shuffleIndexes(
+                    imageTotal,
+                    variationSeed
+                );
+
+
+            imageIndexes =
+                imageIndexes.slice(
+                    0,
+                    imageCount
+                );
+
+
+            // ----------------------------------
+            // Content Variant
+            // ----------------------------------
+            //
+            // V1 chưa tự viết lại caption.
+            // Chỉ tạo slot để Campaign/AI
+            // dùng sau này.
+            //
+            const contentVariant =
+                (index % 5) + 1;
+
+
+            return {
+
+                groupId:
+                    String(
+                        group.id
+                    ),
+
+                contentVariant,
+
+                imageIndexes,
+
+                imageCount,
+
+            };
+        }
+    );
+}
+
 
             // ======================================
             // 1. TẠO CAMPAIGN
             // ======================================
 
+const variationPlan =
+    createVariationPlan(
+        selectedGroups,
+        images.length
+    );
+
+console.log(
+    "🎨 Campaign Variation Plan:",
+    variationPlan
+);
+
             const campaign =
-                createCampaign({
+                         
+            createCampaign({
 
                     car:
                         postingCar,
@@ -1106,6 +1306,9 @@ function handleClearSelectedGroups() {
                     imageCount:
                         images.length,
 
+                        variationPlan:
+    variationPlan,
+
                 });
 
 
@@ -1125,6 +1328,17 @@ function handleClearSelectedGroups() {
             for (
                 const currentGroup of selectedGroups
             ) {
+
+const variation =
+    variationPlan.find(
+        (item) =>
+            String(
+                item.groupId
+            ) ===
+            String(
+                currentGroup.id
+            )
+    );
 
                 const job =
                     addToPostingQueue({
@@ -1155,6 +1369,9 @@ function handleClearSelectedGroups() {
                             Number(
                                 selectedAccountId
                             ),
+
+                            variation:
+    variation,
 
                     });
 
