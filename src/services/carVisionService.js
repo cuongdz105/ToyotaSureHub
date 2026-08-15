@@ -8,9 +8,30 @@
 // - Không gọi API
 // - Không tốn tiền
 //
-// Sau khi flow chạy ổn sẽ thay provider
-// bằng Vision API thật.
+// Flow:
 //
+// Ảnh
+// ↓
+// Mock Vision
+// ↓
+// Vehicle Matcher
+// ↓
+// Kết quả chuẩn theo brands.js
+// ↓
+// CarForm
+//
+// Sau này chỉ cần thay phần Mock Vision
+// bằng Vision API thật.
+// =======================================
+
+import {
+  matchVehicleResult,
+} from "../utils/vehicleMatcher";
+
+
+// =======================================
+// DELAY
+// =======================================
 
 function delay(ms) {
   return new Promise((resolve) =>
@@ -19,23 +40,11 @@ function delay(ms) {
 }
 
 
-function detectFromImages(images = []) {
+// =======================================
+// MOCK VISION
+// =======================================
 
-  /*
-   * MOCK DATA
-   *
-   * Đây chỉ để test toàn bộ flow:
-   *
-   * Ảnh
-   * ↓
-   * AI
-   * ↓
-   * Kết quả
-   * ↓
-   * CarForm
-   *
-   * Chưa phải nhận diện ảnh thật.
-   */
+function detectFromImages(images = []) {
 
   const imageCount =
     Array.isArray(images)
@@ -52,13 +61,29 @@ function detectFromImages(images = []) {
   }
 
 
+  /*
+   * MOCK DATA
+   *
+   * Đây vẫn chưa phải Vision AI thật.
+   *
+   * Mục đích hiện tại:
+   *
+   * Ảnh
+   * ↓
+   * Vision
+   * ↓
+   * Matcher
+   * ↓
+   * CarForm
+   */
+
   return {
 
     brand: "Toyota",
 
     model: "Vios",
 
-    version: "G CVT",
+    version: "G",
 
     year: "2022",
 
@@ -80,6 +105,10 @@ function detectFromImages(images = []) {
 }
 
 
+// =======================================
+// RECOGNIZE CAR
+// =======================================
+
 export async function recognizeCarFromImages(
   images = []
 ) {
@@ -91,15 +120,100 @@ export async function recognizeCarFromImages(
   );
 
 
+  // Giả lập thời gian AI xử lý
+
   await delay(1500);
 
 
-  const result =
+  // =====================================
+  // 1. VISION NHẬN DIỆN THÔ
+  // =====================================
+
+  const visionResult =
     detectFromImages(images);
 
 
   console.log(
-    "🤖 Vision Result:",
+    "🤖 Raw Vision Result:",
+    visionResult
+  );
+
+
+  // =====================================
+  // 2. VEHICLE MATCHER
+  // =====================================
+  //
+  // Ví dụ Vision trả:
+  //
+  // Toyota
+  // Vios
+  // G
+  //
+  // Matcher sẽ đối chiếu brands.js
+  //
+  // Toyota
+  // ↓
+  // Vios
+  // ↓
+  // G CVT
+  //
+  // =====================================
+
+  const matchedResult =
+    matchVehicleResult(
+      visionResult
+    );
+
+
+  console.log(
+    "🔎 Vehicle Matcher Result:",
+    matchedResult
+  );
+
+
+  // =====================================
+  // 3. KẾT QUẢ CUỐI CÙNG
+  // =====================================
+
+  const result = {
+
+    ...visionResult,
+
+    brand:
+      matchedResult.brand ||
+      visionResult.brand,
+
+    model:
+      matchedResult.model ||
+      visionResult.model,
+
+    version:
+      matchedResult.version ||
+      visionResult.version,
+
+    year:
+      matchedResult.year ||
+      visionResult.year,
+
+    color:
+      matchedResult.color ||
+      visionResult.color,
+
+    confidence:
+      matchedResult.confidence ||
+      visionResult.confidence,
+
+    matched:
+      matchedResult.matched,
+
+    matcherSource:
+      "vehicleMatcher",
+
+  };
+
+
+  console.log(
+    "🤖 Final Vision Result:",
     result
   );
 

@@ -169,45 +169,42 @@ function CarForm({ editCar }) {
 
   function applyVisionResult() {
 
-    if (!visionResult) {
-      return;
-    }
-
-
-    setCar((prev) => ({
-      ...prev,
-
-      brand:
-        visionResult.brand ||
-        prev.brand,
-
-      model:
-        visionResult.model ||
-        prev.model,
-
-      version:
-        visionResult.version ||
-        prev.version,
-
-      year:
-        visionResult.year ||
-        prev.year,
-
-      color:
-        visionResult.color ||
-        prev.color,
-
-      odo:
-        visionResult.odo ||
-        prev.odo,
-    }));
-
-
-    alert(
-      "✅ Đã đưa kết quả AI vào form. Ông kiểm tra lại trước khi lưu xe."
-    );
-
+  if (!visionResult) {
+    return;
   }
+
+  setCar((prev) => ({
+    ...prev,
+
+    brand:
+      visionResult.brand ||
+      prev.brand,
+
+    model:
+      visionResult.model ||
+      prev.model,
+
+    version:
+      visionResult.version ||
+      prev.version,
+
+    year:
+      visionResult.year ||
+      prev.year,
+
+    color:
+      visionResult.color ||
+      prev.color,
+
+    odo:
+      visionResult.odo ||
+      prev.odo,
+  }));
+
+  alert(
+    "✅ Đã đưa kết quả AI vào form. Ông kiểm tra lại trước khi lưu xe."
+  );
+}
 
 
   // ==========================================

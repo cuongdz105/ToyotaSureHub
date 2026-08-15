@@ -1157,20 +1157,20 @@ function handleClearSelectedGroups() {
             );
 
 // ==========================================
-// VARIATION ENGINE V1
+// VARIATION ENGINE V2
 // ==========================================
 //
 // Mục tiêu:
-// - Mỗi Job có kế hoạch ảnh riêng.
-// - Không random lại khi Retry.
-// - Không thay đổi ảnh gốc của xe.
-// - Content variant trước mắt là slot,
-//   sau này nối AI Content Variant Engine.
+// - Mỗi Job có nội dung Facebook riêng.
+// - Không gọi AI lại cho từng Job.
+// - Nội dung được tạo deterministic từ bài AI gốc.
+// - Retry không tạo lại nội dung.
+// - Ảnh và nội dung đều được khóa trong Campaign.
 // ==========================================
 
 function createSeededRandom(seed) {
 
-    let value = seed;
+    let value = Number(seed) || 1;
 
     return function () {
 
@@ -1182,6 +1182,10 @@ function createSeededRandom(seed) {
     };
 }
 
+
+// ==========================================
+// SHUFFLE ẢNH
+// ==========================================
 
 function shuffleIndexes(
     count,
@@ -1209,6 +1213,7 @@ function shuffleIndexes(
                 random() * (i + 1)
             );
 
+
         [
             indexes[i],
             indexes[j],
@@ -1223,9 +1228,402 @@ function shuffleIndexes(
 }
 
 
+// ==========================================
+// CHUẨN HÓA CONTENT
+// ==========================================
+
+function normalizeContent(
+    value
+) {
+
+    return String(
+        value || ""
+    )
+        .replace(/\r\n/g, "\n")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+}
+
+
+// ==========================================
+// TÁCH NỘI DUNG THÀNH CÁC BLOCK
+// ==========================================
+
+function splitContentBlocks(
+    content
+) {
+
+    return normalizeContent(
+        content
+    )
+        .split(/\n\s*\n/)
+        .map(
+            (item) =>
+                item.trim()
+        )
+        .filter(Boolean);
+}
+
+
+// ==========================================
+// HOÁN ĐỔI BLOCK CONTENT
+// ==========================================
+//
+// Không phá nội dung gốc.
+// Chỉ đổi thứ tự các đoạn để bài
+// không giống hệt nhau.
+// ==========================================
+
+function reorderContentBlocks(
+    blocks,
+    variantIndex
+) {
+
+    if (
+        !Array.isArray(blocks) ||
+        blocks.length <= 1
+    ) {
+
+        return blocks;
+    }
+
+
+    const result =
+        [...blocks];
+
+
+    const mode =
+        variantIndex % 5;
+
+
+    // V1: giữ nguyên
+    if (mode === 0) {
+
+        return result;
+    }
+
+
+    // V2: đoạn cuối lên đầu
+    if (mode === 1) {
+
+        return [
+            result[result.length - 1],
+            ...result.slice(
+                0,
+                result.length - 1
+            ),
+        ];
+    }
+
+
+    // V3: đoạn thứ 2 lên đầu
+    if (mode === 2) {
+
+        return [
+            result[1],
+            result[0],
+            ...result.slice(2),
+        ];
+    }
+
+
+    // V4: đảo thứ tự
+    if (mode === 3) {
+
+        return [
+            ...result,
+        ].reverse();
+    }
+
+
+    // V5: đoạn đầu xuống cuối
+    return [
+        ...result.slice(1),
+        result[0],
+    ];
+}
+
+
+// ==========================================
+// HOOKS
+// ==========================================
+
+const FACEBOOK_VARIATION_HOOKS = [
+
+    "🚗 Một chiếc xe đáng xem dành cho các bác đang tìm xe đẹp, lịch sử rõ ràng:",
+
+    "🔥 Hôm nay em giới thiệu tới các bác một chiếc xe rất đáng cân nhắc:",
+
+    "👀 Các bác đang tìm một chiếc xe vừa đẹp vừa yên tâm về chất lượng thì xem em này nhé:",
+
+    "💥 Xe đẹp không thiếu, nhưng một chiếc xe có lịch sử rõ ràng và được kiểm định kỹ càng thì đáng để quan tâm hơn:",
+
+    "✨ Thêm một lựa chọn rất sáng giá cho các bác đang tìm xe đã qua sử dụng:",
+
+    "🚘 Nếu các bác đang săn một chiếc xe đẹp, chạy ít và nguồn gốc rõ ràng thì đừng bỏ qua em này:",
+
+    "📌 Một chiếc xe vừa về, ngoại hình và thông tin xe đều rất đáng chú ý:",
+
+    "😍 Nhìn thực tế chiếc xe này ngoài đời còn đẹp hơn trên ảnh các bác ạ:",
+
+    "🔎 Các bác mua xe cũ quan tâm nhất điều gì? Lịch sử xe, chất lượng hay giá? Chiếc này có khá nhiều điểm cộng:",
+
+    "💯 Thêm một chiếc xe chất lượng đang có mặt tại Toyota Sure:",
+
+    "🚘 Tìm xe cũ nhưng muốn sự yên tâm như mua xe chính hãng? Các bác tham khảo chiếc này:",
+
+    "⭐ Chiếc xe hôm nay em muốn giới thiệu với các bác có một loạt điểm rất đáng tiền:",
+
+    "🔥 Một lựa chọn đáng xem cho các bác đang chuẩn bị xuống tiền mua xe:",
+
+    "📣 Xe đẹp về hàng rồi các bác ơi! Thông tin chi tiết em để ngay dưới đây:",
+
+    "🎯 Nếu tiêu chí của các bác là xe đẹp - lịch sử rõ - kiểm định kỹ thì chiếc này rất đáng xem:",
+
+    "🚗 Có những chiếc xe nhìn qua đã thấy ưng, và đây là một trong số đó:",
+
+    "💎 Một chiếc xe rất phù hợp cho các bác muốn mua xe đã qua sử dụng nhưng vẫn đặt yếu tố chất lượng lên đầu:",
+
+    "📋 Thông tin một chiếc xe đang được quan tâm tại Toyota Sure:",
+
+    "🔔 Các bác đang tìm xe trong tầm này nhớ tham khảo thêm chiếc này trước khi quyết định:",
+
+    "🏆 Một ứng viên rất đáng để đưa vào danh sách xe cần xem trực tiếp:"
+];
+
+// ==========================================
+// CTA
+// ==========================================
+
+const FACEBOOK_VARIATION_CTA = [
+
+    "📞 Chi tiết liên hệ Cương đẹp zai: 0933.666.980",
+
+    "☎️ Các bác quan tâm inbox hoặc liên hệ Cương đẹp zai: 0933.666.980",
+
+    "👉 Muốn xem thêm ảnh và thông tin chi tiết, liên hệ Cương đẹp zai: 0933.666.980",
+
+    "📲 Quan tâm chiếc này cứ liên hệ Cương đẹp zai: 0933.666.980",
+
+    "🚗 Các bác muốn xem xe trực tiếp, liên hệ Cương đẹp zai: 0933.666.980",
+
+    "💬 Cần tư vấn thêm về xe, cứ inbox hoặc gọi Cương đẹp zai: 0933.666.980",
+
+    "📞 Chi tiết xe và giá bán, các bác liên hệ Cương đẹp zai: 0933.666.980",
+
+    "👉 Bác nào đang tìm đúng mẫu này thì liên hệ Cương đẹp zai: 0933.666.980",
+
+    "🏁 Quan tâm xe thì liên hệ Cương đẹp zai để được gửi thông tin chi tiết: 0933.666.980",
+
+    "📲 Cần video chi tiết hoặc muốn xem xe trực tiếp, liên hệ Cương đẹp zai: 0933.666.980",
+
+    "☎️ Toyota Sure sẵn sàng hỗ trợ các bác. Liên hệ Cương đẹp zai: 0933.666.980",
+
+    "💬 Các bác có câu hỏi gì về chiếc xe này cứ inbox Cương đẹp zai: 0933.666.980",
+
+    "🚘 Muốn xem xe tận mắt, liên hệ Cương đẹp zai: 0933.666.980",
+
+    "📞 Bác nào quan tâm em gửi thêm ảnh và thông tin chi tiết: 0933.666.980",
+
+    "👉 Đừng chỉ nhìn ảnh, các bác qua xem thực tế sẽ thấy chiếc này rất đáng cân nhắc. Liên hệ Cương đẹp zai: 0933.666.980",
+
+    "📲 Quan tâm xe thì inbox Cương đẹp zai: 0933.666.980",
+
+    "☎️ Cần báo giá chi tiết hoặc phương án tài chính, liên hệ Cương đẹp zai: 0933.666.980",
+
+    "🚗 Xe có sẵn, các bác quan tâm cứ liên hệ Cương đẹp zai: 0933.666.980",
+
+    "💬 Bác nào đang tìm chiếc tương tự cứ nhắn Cương đẹp zai: 0933.666.980",
+
+    "🏆 Quan tâm chiếc xe này thì liên hệ Cương đẹp zai để xem xe và kiểm tra trực tiếp nhé: 0933.666.980",
+];
+
+// ==========================================
+// GIÁ TEASER
+// ==========================================
+//
+// Không đưa giá chính xác vào Facebook.
+// Ví dụ:
+// 468 → 4xx
+// 525 → 5xx
+// 685 → 6xx
+// ==========================================
+
+function getPriceTeaser(price) {
+
+    const numericPrice =
+        Number(price);
+
+    if (
+        !Number.isFinite(numericPrice) ||
+        numericPrice <= 0
+    ) {
+        return "";
+    }
+
+    const hundredMillion =
+        Math.floor(
+            numericPrice / 100
+        );
+
+    return `${hundredMillion}xx`;
+}
+
+
+// ==========================================
+// TẠO CONTENT VARIANT
+// ==========================================
+
+function buildContentVariant({
+    baseContent,
+    car,
+    variantIndex,
+    contentVariant,
+}) {
+
+    const rawContent =
+    normalizeContent(
+        baseContent
+    );
+
+
+// ======================================
+// XÓA GIÁ CHÍNH XÁC
+// ======================================
+//
+// 568 triệu → được loại khỏi nội dung
+// 568tr → được loại
+// 568.000.000 → được loại
+// ======================================
+
+const normalized =
+    rawContent
+        .replace(
+            /\b\d{3,4}(?:[.,]\d{3})*(?:\s*)(?:triệu|tr|vnđ|vnd)\b/gi,
+            ""
+        )
+        .replace(
+            /\b\d{3,4}(?:[.,]\d{3}){2}\b/gi,
+            ""
+        )
+        .replace(
+            /💰\s*giá\s*(?:bán\s*)?:?\s*/gi,
+            ""
+        )
+        .replace(
+            /\n{3,}/g,
+            "\n\n"
+        )
+        .trim();
+
+
+    if (!normalized) {
+
+        return "";
+    }
+
+
+    const blocks =
+        splitContentBlocks(
+            normalized
+        );
+
+
+    const orderedBlocks =
+        reorderContentBlocks(
+            blocks,
+            variantIndex
+        );
+
+
+    const hook =
+        FACEBOOK_VARIATION_HOOKS[
+            variantIndex %
+            FACEBOOK_VARIATION_HOOKS.length
+        ];
+
+
+    const cta =
+        FACEBOOK_VARIATION_CTA[
+            (
+                variantIndex * 7 +
+                contentVariant
+            ) %
+            FACEBOOK_VARIATION_CTA.length
+        ];
+
+
+    const carLabel =
+        [
+            car?.brand,
+            car?.model,
+            car?.version,
+        ]
+            .filter(Boolean)
+            .join(" ")
+            .trim();
+
+
+    // --------------------------------------
+    // Dòng nhận diện xe
+    // --------------------------------------
+
+    const vehicleLine =
+    carLabel
+        ? `🚗 ${carLabel}`
+        : "";
+
+
+// ======================================
+// GIÁ TEASER
+// ======================================
+
+const priceTeaser =
+    getPriceTeaser(
+        car?.price
+    );
+
+const priceLine =
+    priceTeaser
+        ? `💰 Giá chỉ ${priceTeaser} – chi tiết liên hệ Cương đẹp zai: 0933.666.980`
+        : "";
+
+    // --------------------------------------
+    // Tạo bài
+    // --------------------------------------
+
+    const result = [
+
+    hook,
+
+    vehicleLine,
+
+    ...orderedBlocks,
+
+    priceLine,
+
+    cta,
+
+]
+    .filter(Boolean)
+    .join("\n\n");
+
+
+    return normalizeContent(
+        result
+    );
+}
+
+
+// ==========================================
+// CREATE VARIATION PLAN
+// ==========================================
+
 function createVariationPlan(
     groups,
     imageTotal,
+    baseContent,
+    car,
     campaignSeed = Date.now()
 ) {
 
@@ -1233,6 +1631,7 @@ function createVariationPlan(
         !Array.isArray(groups) ||
         groups.length === 0
     ) {
+
         return [];
     }
 
@@ -1241,24 +1640,28 @@ function createVariationPlan(
         !imageTotal ||
         imageTotal <= 0
     ) {
+
+        return [];
+    }
+
+
+    if (
+        !baseContent?.trim()
+    ) {
+
         return [];
     }
 
 
     return groups.map(
-        (group, index) => {
+        (
+            group,
+            index
+        ) => {
 
             // ----------------------------------
-            // Số ảnh:
-            // giữ trong khoảng 70–100% ảnh gốc
-            // nhưng tối thiểu 6 nếu xe có >= 6 ảnh.
+            // Seed riêng cho từng Job
             // ----------------------------------
-
-            const minimumImages =
-                imageTotal >= 6
-                    ? 6
-                    : imageTotal;
-
 
             const variationSeed =
                 Number(
@@ -1271,6 +1674,16 @@ function createVariationPlan(
                 createSeededRandom(
                     variationSeed
                 );
+
+
+            // ----------------------------------
+            // Số ảnh
+            // ----------------------------------
+
+            const minimumImages =
+                imageTotal >= 6
+                    ? 6
+                    : imageTotal;
 
 
             let imageCount =
@@ -1286,6 +1699,7 @@ function createVariationPlan(
                     imageTotal -
                     minimumImages +
                     1;
+
 
                 imageCount =
                     minimumImages +
@@ -1318,12 +1732,25 @@ function createVariationPlan(
             // Content Variant
             // ----------------------------------
             //
-            // V1 chưa tự viết lại caption.
-            // Chỉ tạo slot để Campaign/AI
-            // dùng sau này.
-            //
+            // 1-5 = nhóm phong cách
+            // variantIndex = Job cụ thể
+            // ----------------------------------
+
             const contentVariant =
                 (index % 5) + 1;
+
+
+            const variantIndex =
+                index;
+
+
+            const variantContent =
+                buildContentVariant({
+                    baseContent,
+                    car,
+                    variantIndex,
+                    contentVariant,
+                });
 
 
             return {
@@ -1334,6 +1761,11 @@ function createVariationPlan(
                     ),
 
                 contentVariant,
+
+                variantIndex,
+
+                content:
+                    variantContent,
 
                 imageIndexes,
 
@@ -1352,7 +1784,9 @@ function createVariationPlan(
 const variationPlan =
     createVariationPlan(
         selectedGroups,
-        images.length
+        images.length,
+        content.trim(),
+        postingCar
     );
 
 console.log(
@@ -1421,41 +1855,86 @@ const variation =
             )
     );
 
-                const job =
-                    addToPostingQueue({
 
-                        // ⭐ MỚI:
-                        // tất cả Job thuộc Campaign này
-                        campaignId:
-                            campaign.id,
+if (!variation) {
 
-                        carId:
-                            postingCar.id,
+    throw new Error(
+        `Không tạo được Variation cho nhóm: ${currentGroup.name}`
+    );
+}
 
-                        group: {
-                            ...currentGroup,
 
-                            matchScore:
-                                currentGroup.matchScore ||
-                                0,
-                        },
+const job =
+    addToPostingQueue({
 
-                        content:
-                            content.trim(),
+        // ----------------------------------
+        // CAMPAIGN
+        // ----------------------------------
 
-                        imageCount:
-                            images.length,
+        campaignId:
+            campaign.id,
 
-                        accountId:
-                            Number(
-                                selectedAccountId
-                            ),
 
-                            variation:
-    variation,
+        // ----------------------------------
+        // XE
+        // ----------------------------------
 
-                    });
+        carId:
+            postingCar.id,
 
+
+        // ----------------------------------
+        // GROUP
+        // ----------------------------------
+
+        group: {
+
+            ...currentGroup,
+
+            matchScore:
+                currentGroup.matchScore ||
+                0,
+
+        },
+
+
+        // ----------------------------------
+        // ⭐ CONTENT RIÊNG CỦA JOB
+        // ----------------------------------
+
+        content:
+            variation.content ||
+            content.trim(),
+
+
+        // ----------------------------------
+        // ẢNH RIÊNG
+        // ----------------------------------
+
+        imageCount:
+            variation.imageCount ||
+            images.length,
+
+
+        // ----------------------------------
+        // ACCOUNT
+        // ----------------------------------
+
+        accountId:
+            Number(
+                selectedAccountId
+            ),
+
+
+        // ----------------------------------
+        // VARIATION
+        // ----------------------------------
+
+        variation:
+
+            variation,
+
+    });
 
                 createdJobs.push(
                     job
