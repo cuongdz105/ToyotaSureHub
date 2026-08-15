@@ -1027,6 +1027,54 @@ export function removeQueueJob(
 
 
 // ==========================================
+// REMOVE ALL QUEUE JOBS BY CAR ID
+// ==========================================
+// Dùng khi xe được đánh dấu ĐÃ BÁN.
+// Xóa toàn bộ Job Facebook liên quan đến xe.
+// Không ảnh hưởng Job của các xe khác.
+// ==========================================
+
+export function deleteQueueJobsByCarId(
+    carId
+) {
+    if (
+        carId === null ||
+        carId === undefined ||
+        carId === ""
+    ) {
+        return 0;
+    }
+
+    const targetCarId =
+        String(carId);
+
+    const queue =
+        loadPostingQueue();
+
+    const updatedQueue =
+        queue.filter(
+            (job) =>
+                String(
+                    job.carId ?? ""
+                ) !== targetCarId
+        );
+
+    const removedCount =
+        queue.length -
+        updatedQueue.length;
+
+    savePostingQueue(
+        updatedQueue
+    );
+
+    console.log(
+        `🗑️ Đã xóa ${removedCount} Queue Job của xe ${targetCarId}`
+    );
+
+    return removedCount;
+}
+
+// ==========================================
 // CLEAR QUEUE
 // ==========================================
 

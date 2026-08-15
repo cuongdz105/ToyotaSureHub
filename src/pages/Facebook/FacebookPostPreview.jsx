@@ -9,6 +9,10 @@ import {
 } from "../../services/postingSessionService";
 
 import {
+    consumeV11PostingIntent,
+} from "../../services/v11PostingIntentService";
+
+import {
     addToPostingQueue,
 } from "../../services/facebookPostingQueueService";
 
@@ -68,30 +72,88 @@ function FacebookPostPreview() {
     const [selectedAccountId, setSelectedAccountId] =
         useState("");
 
-
+      
     // ==========================================
     // LOAD DỮ LIỆU
     // ==========================================
 
     useEffect(() => {
 
+    // ==========================================
+    // V11 PRIORITY ENGINE → FACEBOOK POSTING
+    // ==========================================
+
+    const v11Intent =
+        consumeV11PostingIntent();
+
+
+    if (v11Intent?.car) {
+
+        console.log(
+            "🧠 V11 chọn xe:",
+            v11Intent.car
+        );
+
+        console.log(
+            "👤 V11 chọn Facebook:",
+            v11Intent.accountId
+        );
+
+
+        setPostingCar(
+            v11Intent.car
+        );
+
+
+        if (
+            v11Intent.accountId
+        ) {
+            setSelectedAccountId(
+                String(
+                    v11Intent.accountId
+                )
+            );
+        }
+
+    } else {
+
+        // --------------------------------------
+        // LUỒNG CŨ
+        // --------------------------------------
+
         const car =
             getCurrentPosting();
 
-        setPostingCar(car);
-
-
-        // --------------------------------------
-        // LOAD FACEBOOK ACCOUNTS
-        // --------------------------------------
-
-        const savedAccounts =
-            loadAccounts();
-
-        setAccounts(
-            savedAccounts
+        setPostingCar(
+            car
         );
+    }
 
+
+    // ==========================================
+    // LOAD FACEBOOK ACCOUNTS
+    // ==========================================
+
+    const savedAccounts =
+        loadAccounts();
+
+    setAccounts(
+        savedAccounts
+    );
+
+
+    // ==========================================
+    // ACCOUNT FALLBACK
+    // ==========================================
+
+    /*
+     * Chỉ dùng Default Account nếu
+     * Priority Engine KHÔNG chỉ định account.
+     */
+
+    if (
+        !v11Intent?.accountId
+    ) {
 
         const defaultAccount =
             getDefaultAccount();
@@ -115,73 +177,90 @@ function FacebookPostPreview() {
                 )
             );
         }
+    }
 
 
-        // --------------------------------------
-        // LOAD FACEBOOK GROUPS
-        // --------------------------------------
+    // ==========================================
+    // LOAD FACEBOOK GROUPS
+    // ==========================================
 
-        const savedGroups =
-            loadGroups();
+    const savedGroups =
+        loadGroups();
 
-        setGroups(
-            savedGroups
+    setGroups(
+        savedGroups
+    );
+
+
+    // ==========================================
+    // LOAD NHÓM ĐÃ CHỌN TỪ BƯỚC TRƯỚC
+    // ==========================================
+
+    const savedGroup =
+        sessionStorage.getItem(
+            "toyota_sure_selected_group"
         );
 
 
-        // --------------------------------------
-        // LOAD NHÓM ĐÃ CHỌN TỪ BƯỚC TRƯỚC
-        // --------------------------------------
+    if (savedGroup) {
 
-        const savedGroup =
-            sessionStorage.getItem(
-                "toyota_sure_selected_group"
-            );
+        try {
 
-
-        if (savedGroup) {
-
-            try {
-
-                const parsedGroup =
-                    JSON.parse(
-                        savedGroup
-                    );
-
-                if (parsedGroup?.id) {
-
-                    setSelectedGroupIds([
-                        String(
-                            parsedGroup.id
-                        ),
-                    ]);
-                }
-
-            } catch (error) {
-
-                console.error(
-                    "Không đọc được nhóm Facebook:",
-                    error
+            const parsedGroup =
+                JSON.parse(
+                    savedGroup
                 );
+
+            if (
+                parsedGroup?.id
+            ) {
+
+                setSelectedGroupIds([
+                    String(
+                        parsedGroup.id
+                    ),
+                ]);
             }
-        }
 
+        } catch (error) {
 
-        // --------------------------------------
-        // LOAD AI CONTENT CŨ
-        // --------------------------------------
-
-        if (
-            car?.aiContent?.facebook
-        ) {
-
-            setContent(
-                car.aiContent.facebook
+            console.error(
+                "Không đọc được nhóm Facebook:",
+                error
             );
         }
+    }
 
-    }, []);
 
+    // ==========================================
+    // LOAD AI CONTENT
+    // ==========================================
+
+    /*
+     * Không thay đổi logic cũ.
+     *
+     * postingCar được set phía trên.
+     * Nếu V11 chọn xe thì lấy content của
+     * chính chiếc xe đó.
+     */
+
+    const contentCar =
+        v11Intent?.car ||
+        getCurrentPosting();
+
+
+    if (
+        contentCar?.aiContent?.facebook
+    ) {
+
+        setContent(
+            contentCar
+                .aiContent
+                .facebook
+        );
+    }
+
+}, []);
 
     // ==========================================
     // KIỂM TRA ACCOUNT CÓ ĐƯỢC PHÉP GROUP
@@ -1039,6 +1118,7 @@ function handleClearSelectedGroups() {
         }
 
 
+
         const carLabel =
             `${postingCar.brand || ""} ` +
             `${postingCar.model || ""} ` +
@@ -1056,10 +1136,11 @@ function handleClearSelectedGroups() {
 
                 `👥 Số nhóm: ${selectedGroups.length}\n` +
 
-                `📷 Ảnh: ${images.length}\n\n` +
+               `📷 Ảnh: ${images.length}\n` +
 
-                `Các Job sẽ được xếp vào Queue ` +
-                `và mang cùng một Campaign ID.`
+
+`Các Job sẽ được xếp vào Queue ` +
+`và mang cùng một Campaign ID.`
 
             );
 
@@ -2642,11 +2723,9 @@ const variation =
             ================================= */}
 
             <SectionCard
-                title="🚀 5. Sẵn sàng tạo Queue"
+                title="🚀 5. Tạo Queue Facebook"
             >
-
                 <div>
-
                     <div
                         style={{
                             marginBottom:
@@ -2713,7 +2792,6 @@ const variation =
 
 
                     <br />
-
 
                     <PrimaryButton
                         onClick={

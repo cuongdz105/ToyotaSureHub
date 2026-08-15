@@ -1,4 +1,5 @@
 import CarRowActions from "./CarRowActions";
+
 import {
   formatPrice,
   formatOdo,
@@ -8,6 +9,7 @@ function CarTable({
   cars,
   navigate,
   onDelete,
+  onMarkAsSold,
 }) {
   return (
     <table className="car-table">
@@ -34,17 +36,24 @@ function CarTable({
 
             <td>{car.color}</td>
 
-            <td>{formatPrice(car.price)}</td>
+            <td>
+              {formatPrice(car.price)}
+            </td>
 
-            <td>{formatOdo(car.odo)}</td>
+            <td>
+              {formatOdo(car.odo)}
+            </td>
 
-            <td>{car.status}</td>
+            <td>
+              {car.status}
+            </td>
 
             <td>
               <CarRowActions
                 car={car}
                 navigate={navigate}
                 onDelete={onDelete}
+                onMarkAsSold={onMarkAsSold}
               />
             </td>
           </tr>

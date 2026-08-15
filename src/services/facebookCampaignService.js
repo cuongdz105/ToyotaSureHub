@@ -229,6 +229,7 @@ export function createCampaign({
     content = "",
     imageCount = 0,
     variationPlan = [],
+    scheduledAt = null,
 }) {
 
 
@@ -288,6 +289,9 @@ export function createCampaign({
 
         updatedAt:
             now,
+
+            scheduledAt:
+    scheduledAt || null,
 
 
         // ----------------------------------
@@ -832,6 +836,54 @@ export function deleteCampaign(
     return true;
 }
 
+
+// ==========================================
+// DELETE ALL CAMPAIGNS BY CAR ID
+// ==========================================
+// Dùng khi xe được đánh dấu ĐÃ BÁN.
+// Xóa toàn bộ Campaign liên quan đến xe.
+// Không ảnh hưởng Campaign của xe khác.
+// ==========================================
+
+export function deleteCampaignsByCarId(
+    carId
+) {
+    if (
+        carId === null ||
+        carId === undefined ||
+        carId === ""
+    ) {
+        return 0;
+    }
+
+    const targetCarId =
+        String(carId);
+
+    const campaigns =
+        loadCampaigns();
+
+    const updatedCampaigns =
+        campaigns.filter(
+            (campaign) =>
+                String(
+                    campaign.carId ?? ""
+                ) !== targetCarId
+        );
+
+    const removedCount =
+        campaigns.length -
+        updatedCampaigns.length;
+
+    saveCampaigns(
+        updatedCampaigns
+    );
+
+    console.log(
+        `🗑️ Đã xóa ${removedCount} Campaign của xe ${targetCarId}`
+    );
+
+    return removedCount;
+}
 
 // ==========================================
 // CLEAR ALL CAMPAIGNS
