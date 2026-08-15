@@ -97,6 +97,11 @@ function FacebookPostingQueue() {
     const [processing, setProcessing] =
         useState(false);
 
+    // Tiến độ Copy ảnh của từng Job.
+    // Giá trị là số ảnh đã copy thành công vào Clipboard.
+    const [copyProgress, setCopyProgress] =
+        useState({});
+
 
     // ==========================================
     // REFRESH
@@ -124,6 +129,51 @@ function FacebookPostingQueue() {
     // ==========================================
     // TÌM XE THEO CAR ID
     // ==========================================
+
+    // ==========================================
+    // LẤY BỘ ẢNH ĐĂNG THEO VARIATION
+    // ==========================================
+
+    function getPostingImages(job) {
+        const car = getCar(job);
+        const images = getValidCarImages(car);
+
+        if (images.length === 0) {
+            return [];
+        }
+
+        const indexes =
+            Array.isArray(
+                job.variation?.imageIndexes
+            )
+                ? job.variation.imageIndexes
+                      .map((index) => Number(index))
+                      .filter(
+                          (index) =>
+                              Number.isInteger(index) &&
+                              index >= 0 &&
+                              index < images.length
+                      )
+                : [];
+
+        if (indexes.length === 0) {
+            return images.map(
+                (image, index) => ({
+                    image,
+                    originalIndex: index,
+                })
+            );
+        }
+
+        return indexes.map(
+            (index) => ({
+                image: images[index],
+                originalIndex: index,
+            })
+        );
+    }
+
+
 
     function getCar(job) {
         return (
@@ -164,36 +214,203 @@ function FacebookPostingQueue() {
     }
 
 
-    function getPostingImages(job) {
-        const car = getCar(job);
-        const images = getValidCarImages(car);
+    // ==========================================
+// CLIPBOARD - COPY 1 ẢNH
+// ==========================================
+//
+// Test đầu tiên: chỉ copy 1 ảnh.
+// Sang Facebook rồi Ctrl + V để kiểm tra.
+//
 
-        if (images.length === 0) {
-            return [];
+async function copyImageToClipboard(
+    image,
+    onSuccess,
+    onError
+) {
+    try {
+        if (
+            !navigator.clipboard ||
+            typeof navigator.clipboard.write !== "function"
+        ) {
+            throw new Error(
+                "Chrome không hỗ trợ Clipboard API trên trang này."
+            );
         }
 
-        const indexes = Array.isArray(job.variation?.imageIndexes)
-            ? job.variation.imageIndexes
-                  .map((index) => Number(index))
-                  .filter(
-                      (index) =>
-                          Number.isInteger(index) &&
-                          index >= 0 &&
-                          index < images.length
-                  )
-            : [];
-
-        if (indexes.length === 0) {
-            return images.map((image, index) => ({
-                image,
-                originalIndex: index,
-            }));
+        if (
+            typeof ClipboardItem === "undefined"
+        ) {
+            throw new Error(
+                "Chrome không hỗ trợ ClipboardItem."
+            );
         }
 
-        return indexes.map((index) => ({
-            image: images[index],
-            originalIndex: index,
-        }));
+        const src =
+            getImageSrc(image);
+
+        if (!src) {
+            throw new Error(
+                "Không tìm thấy dữ liệu ảnh."
+            );
+        }
+
+        const response =
+            await fetch(src);
+
+        if (!response.ok) {
+            throw new Error(
+                `Không đọc được ảnh (HTTP ${response.status}).`
+            );
+        }
+
+        const blob =
+            await response.blob();
+
+        let clipboardBlob =
+            blob;
+
+        // Clipboard API bắt buộc hỗ trợ PNG.
+        // Nếu ảnh là JPEG/WebP... thì chuyển sang PNG.
+        if (
+            blob.type !== "image/png"
+        ) {
+            const bitmap =
+                await createImageBitmap(
+                    blob
+                );
+
+            const canvas =
+                document.createElement(
+                    "canvas"
+                );
+
+            canvas.width =
+                bitmap.width;
+
+            canvas.height =
+                bitmap.height;
+
+            const ctx =
+                canvas.getContext(
+                    "2d"
+                );
+
+            if (!ctx) {
+                bitmap.close();
+
+                throw new Error(
+                    "Không tạo được Canvas để chuyển ảnh."
+                );
+            }
+
+            ctx.drawImage(
+                bitmap,
+                0,
+                0
+            );
+
+            bitmap.close();
+
+            clipboardBlob =
+                await new Promise(
+                    (resolve, reject) => {
+
+                        canvas.toBlob(
+                            (result) => {
+
+                                if (!result) {
+                                    reject(
+                                        new Error(
+                                            "Không chuyển được ảnh sang PNG."
+                                        )
+                                    );
+
+                                    return;
+                                }
+
+                                resolve(
+                                    result
+                                );
+                            },
+                            "image/png"
+                        );
+
+                    }
+                );
+        }
+
+        const item =
+            new ClipboardItem({
+                "image/png":
+                    clipboardBlob,
+            });
+
+        await navigator.clipboard.write([
+            item,
+        ]);
+
+        if (onSuccess) {
+            onSuccess();
+        }
+
+        return true;
+
+    } catch (error) {
+
+        console.error(
+            "❌ Copy ảnh vào Clipboard thất bại:",
+            error
+        );
+
+        if (onError) {
+            onError(
+                error?.message ||
+                "Không thể copy ảnh."
+            );
+        }
+
+        return false;
+    }
+}
+
+
+    async function handleCopyManualImage(
+        job,
+        postingImages,
+        imageIndex
+    ) {
+        const target =
+            postingImages[imageIndex];
+
+        if (!target?.image) {
+            return;
+        }
+
+        const success =
+            await copyImageToClipboard(
+                target.image,
+                () => {},
+                (message) => {
+                    window.alert(
+                        `❌ Không copy được Ảnh ${imageIndex + 1}: ${message}`
+                    );
+                }
+            );
+
+        if (!success) {
+            return;
+        }
+
+        setCopyProgress(
+            (previous) => ({
+                ...previous,
+                [job.id]:
+                    Math.max(
+                        Number(previous[job.id]) || 0,
+                        imageIndex + 1
+                    ),
+            })
+        );
     }
 
 
@@ -231,7 +448,137 @@ function FacebookPostingQueue() {
     }
 
 
-    function handleDownloadImage(image, job, index) {
+    // ==========================================
+// DOWNLOAD - CHỌN THƯ MỤC & TẢI TOÀN BỘ ẢNH
+// ==========================================
+
+async function handleDownloadAllImages(
+    postingImages,
+    job
+) {
+    if (
+        !Array.isArray(postingImages) ||
+        postingImages.length === 0
+    ) {
+        window.alert(
+            "⚠️ Job này chưa có ảnh để tải."
+        );
+
+        return;
+    }
+
+    // Chrome hỗ trợ File System Access API trên localhost.
+    // Người dùng tự chọn thư mục lưu, Hub không đọc/biết đường dẫn hệ điều hành.
+    if (
+        typeof window.showDirectoryPicker !== "function"
+    ) {
+        window.alert(
+            "⚠️ Chrome của ông không hỗ trợ chọn thư mục trực tiếp.\n\n" +
+            "Ông có thể bật 'Hỏi vị trí lưu trước khi tải' trong cài đặt Chrome."
+        );
+
+        return;
+    }
+
+    let directoryHandle;
+
+    try {
+        directoryHandle =
+            await window.showDirectoryPicker({
+                mode: "readwrite",
+            });
+    } catch (error) {
+
+        if (
+            error?.name === "AbortError"
+        ) {
+            return;
+        }
+
+        console.error(
+            "Chọn thư mục thất bại:",
+            error
+        );
+
+        window.alert(
+            "❌ Không thể mở hộp chọn thư mục."
+        );
+
+        return;
+    }
+
+    let downloaded = 0;
+
+    for (
+        let index = 0;
+        index < postingImages.length;
+        index++
+    ) {
+        const image =
+            postingImages[index]?.image;
+
+        const src =
+            getImageSrc(image);
+
+        if (!src) {
+            continue;
+        }
+
+        try {
+            const response =
+                await fetch(src);
+
+            if (!response.ok) {
+                throw new Error(
+                    `HTTP ${response.status}`
+                );
+            }
+
+            const blob =
+                await response.blob();
+
+            const extension =
+                blob.type === "image/png"
+                    ? "png"
+                    : blob.type === "image/webp"
+                        ? "webp"
+                        : "jpg";
+
+            const fileHandle =
+                await directoryHandle.getFileHandle(
+                    `ToyotaSureHub_${job.id}_Anh_${index + 1}.${extension}`,
+                    {
+                        create: true,
+                    }
+                );
+
+            const writable =
+                await fileHandle.createWritable();
+
+            await writable.write(
+                blob
+            );
+
+            await writable.close();
+
+            downloaded += 1;
+
+        } catch (error) {
+
+            console.error(
+                `Không lưu được ảnh ${index + 1}:`,
+                error
+            );
+        }
+    }
+
+    window.alert(
+        `✅ Đã lưu ${downloaded}/${postingImages.length} ảnh vào thư mục ông vừa chọn.`
+    );
+}
+
+
+function handleDownloadImage(image, job, index) {
         const src = getImageSrc(image);
 
         if (!src) {
@@ -1709,6 +2056,155 @@ function FacebookPostingQueue() {
                                                     )}
                                                 </div>
 
+                                                <PrimaryButton
+                                                    onClick={() =>
+                                                        handleDownloadAllImages(
+                                                            postingImages,
+                                                            job
+                                                        )
+                                                    }
+                                                    style={{
+                                                        width: "100%",
+                                                        marginBottom: "10px",
+                                                        padding: "8px",
+                                                        fontSize: "13px",
+                                                        background: "#555",
+                                                    }}
+                                                >
+                                                    📁 Chọn thư mục & tải tất cả ảnh ({postingImages.length})
+                                                </PrimaryButton>
+
+                                                {Number(copyProgress[job.id] || 0) > 0 && (
+                                                    <div
+                                                        style={{
+                                                            marginBottom: "10px",
+                                                            padding: "10px",
+                                                            borderRadius: "8px",
+                                                            background: "#e8f5e9",
+                                                            border: "1px solid #a5d6a7",
+                                                            fontSize: "13px",
+                                                        }}
+                                                    >
+                                                        <div style={{ color: "#2e7d32", fontWeight: "600" }}>
+                                                            ✅ Đã copy {Math.min(
+                                                                Number(copyProgress[job.id] || 0),
+                                                                postingImages.length
+                                                            )}/{postingImages.length} ảnh vào Clipboard
+                                                        </div>
+
+                                                        {Number(copyProgress[job.id] || 0) < postingImages.length ? (
+                                                            <PrimaryButton
+                                                                onClick={() =>
+                                                                    handleCopyManualImage(
+                                                                        job,
+                                                                        postingImages,
+                                                                        Number(copyProgress[job.id] || 0)
+                                                                    )
+                                                                }
+                                                                style={{
+                                                                    width: "100%",
+                                                                    marginTop: "8px",
+                                                                    padding: "8px",
+                                                                    fontSize: "13px",
+                                                                    background: "#1976d2",
+                                                                }}
+                                                            >
+                                                                📋 Copy ảnh tiếp theo · Ảnh {Number(copyProgress[job.id] || 0) + 1}
+                                                            </PrimaryButton>
+                                                        ) : (
+                                                            <div
+                                                                style={{
+                                                                    marginTop: "5px",
+                                                                    color: "#2e7d32",
+                                                                }}
+                                                            >
+                                                                🎉 Đã copy hết bộ ảnh.
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {(() => {
+                                                    const copiedCount =
+                                                        Math.min(
+                                                            Number(
+                                                                copyProgress[job.id] || 0
+                                                            ),
+                                                            postingImages.length
+                                                        );
+
+                                                    const nextIndex =
+                                                        copiedCount;
+
+                                                    if (
+                                                        postingImages.length === 0
+                                                    ) {
+                                                        return null;
+                                                    }
+
+                                                    if (
+                                                        nextIndex >=
+                                                        postingImages.length
+                                                    ) {
+                                                        return (
+                                                            <div
+                                                                style={{
+                                                                    marginBottom: "10px",
+                                                                    padding: "10px 12px",
+                                                                    borderRadius: "8px",
+                                                                    background: "#e8f5e9",
+                                                                    border: "1px solid #81c784",
+                                                                    color: "#2e7d32",
+                                                                    fontWeight: "600",
+                                                                }}
+                                                            >
+                                                                🎉 Đã copy hết {postingImages.length} ảnh vào Clipboard.
+                                                            </div>
+                                                        );
+                                                    }
+
+                                                    return (
+                                                        <div
+                                                            style={{
+                                                                marginBottom: "10px",
+                                                                padding: "10px",
+                                                                borderRadius: "8px",
+                                                                background: "#e3f2fd",
+                                                                border: "1px solid #90caf9",
+                                                            }}
+                                                        >
+                                                            <div
+                                                                style={{
+                                                                    fontSize: "13px",
+                                                                    color: "#555",
+                                                                    marginBottom: "7px",
+                                                                }}
+                                                            >
+                                                                {copiedCount > 0
+                                                                    ? `✅ Đã copy ${copiedCount}/${postingImages.length} ảnh`
+                                                                    : `📋 Chưa copy ảnh nào — bắt đầu từ Ảnh 1`}
+                                                            </div>
+
+                                                            <PrimaryButton
+                                                                onClick={() =>
+                                                                    handleCopyManualImage(
+                                                                        job,
+                                                                        postingImages,
+                                                                        nextIndex
+                                                                    )
+                                                                }
+                                                                style={{
+                                                                    width: "100%",
+                                                                    background: "#1976d2",
+                                                                    fontWeight: "600",
+                                                                }}
+                                                            >
+                                                                📋 Copy ảnh tiếp theo · Ảnh {nextIndex + 1}
+                                                            </PrimaryButton>
+                                                        </div>
+                                                    );
+                                                })()}
+
                                                 <div
                                                     style={{
                                                         display: "grid",
@@ -1764,6 +2260,42 @@ function FacebookPostingQueue() {
                                                                     }}
                                                                 >
                                                                     ⬇️ Tải ảnh
+                                                                </PrimaryButton>
+                                                                <PrimaryButton
+                                                                    onClick={() =>
+                                                                        handleCopyManualImage(
+                                                                            job,
+                                                                            postingImages,
+                                                                            imageIndex
+                                                                        )
+                                                                    }
+                                                                    disabled={
+                                                                        Number(
+                                                                            copyProgress[job.id] || 0
+                                                                        ) > imageIndex
+                                                                    }
+                                                                    style={{
+                                                                        width: "100%",
+                                                                        marginTop: "5px",
+                                                                        padding: "6px 8px",
+                                                                        fontSize: "12px",
+                                                                        background:
+                                                                            Number(
+                                                                                copyProgress[job.id] || 0
+                                                                            ) > imageIndex
+                                                                                ? "#2e7d32"
+                                                                                : "#1976d2",
+                                                                    }}
+                                                                >
+                                                                    {Number(
+                                                                        copyProgress[job.id] || 0
+                                                                    ) > imageIndex
+                                                                        ? "✅ Đã copy"
+                                                                        : Number(
+                                                                            copyProgress[job.id] || 0
+                                                                        ) === imageIndex
+                                                                            ? "📋 Copy ảnh này"
+                                                                            : `📋 Copy Ảnh ${imageIndex + 1}`}
                                                                 </PrimaryButton>
                                                             </div>
                                                         );

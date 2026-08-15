@@ -13,32 +13,24 @@ function Sidebar() {
         <button>🚗 Quản lý xe</button>
       </Link>
 
-      <Link to="/customers">
-        <button>👥 Khách hàng</button>
+      <Link to="/facebook/groups">
+        <button>👥 Facebook Groups</button>
       </Link>
 
-      {/* ==============================
-          FACEBOOK MARKETING CENTER
-      ============================== */}
+      <Link to="/facebook/queue">
+        <button>📋 Facebook Queue</button>
+      </Link>
+
+      <Link to="/campaign">
+        <button>📣 Facebook Campaign</button>
+      </Link>
 
       <Link to="/facebook/accounts">
-  <button>👤 Facebook Accounts</button>
-</Link>
+        <button>👤 Facebook Accounts</button>
+      </Link>
 
-<Link to="/facebook/groups">
-  <button>👥 Facebook Groups</button>
-</Link>
-
-<Link to="/campaign">
-  <button>📣 Facebook Campaign</button>
-</Link>
-
-      {/* ==============================
-          AI
-      ============================== */}
-
-      <Link to="/ai-workspace">
-        <button>🤖 Toyota AI</button>
+      <Link to="/customers">
+        <button>👥 Khách hàng</button>
       </Link>
 
       <button>📊 Báo cáo</button>
