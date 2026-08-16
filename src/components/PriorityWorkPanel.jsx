@@ -36,14 +36,26 @@ function formatCarLabel(task) {
   if (task?.car) {
     const car = task.car;
 
-    const odo =
+    let odo = "";
+
+    if (
       car.odo !== undefined &&
       car.odo !== null &&
       car.odo !== ""
-        ? Number(car.odo) >= 10000
-          ? `${Number(car.odo) / 10000} vạn`
-          : `${car.odo} km`
-        : "";
+    ) {
+      const odoValue = Number(car.odo);
+
+      if (!Number.isNaN(odoValue)) {
+        // ToyotaSureHub quy ước:
+        // 5.5 = 5,5 vạn km
+        // 8.6 = 8,6 vạn km
+        // 12 = 12 vạn km
+
+        odo = `${odoValue.toLocaleString("vi-VN", {
+          maximumFractionDigits: 1,
+        })} vạn km`;
+      }
+    }
 
     return [
       car.brand,
@@ -61,7 +73,6 @@ function formatCarLabel(task) {
     ? `Xe #${task.carId}`
     : "Xe chưa xác định";
 }
-
 
 function getTaskMeta(task) {
 

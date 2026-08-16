@@ -578,25 +578,10 @@ export function calculateCarPriority({
   */
 
   const hasOpenQueue =
-    carQueue.some(
-      (job) =>
-        job.status !==
-        "success"
-    );
-
-
-  const hasOpenCampaign =
-    carCampaigns.some(
-      (campaign) =>
-        ![
-          "completed",
-          "failed",
-          "cancelled",
-        ].includes(
-          campaign.status
-        )
-    );
-
+  carQueue.some(
+    (job) =>
+      job.status !== "success"
+  );
 
   const carLabel =
     getCarLabel(car);
@@ -607,10 +592,7 @@ export function calculateCarPriority({
   thì ưu tiên tuyệt đối.
   */
 
-  if (
-    hasOpenQueue ||
-    hasOpenCampaign
-  ) {
+  if (hasOpenQueue) {
 
     const total =
       carQueue.length ||

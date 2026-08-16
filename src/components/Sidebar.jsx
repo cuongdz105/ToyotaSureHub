@@ -13,6 +13,14 @@ function Sidebar() {
         <button>🚗 Quản lý xe</button>
       </Link>
 
+      {/* =================================
+          CONTENT RESEARCH
+      ================================= */}
+
+      <Link to="/content-library">
+        <button>📚 Thư viện bài mẫu</button>
+      </Link>
+
       <Link to="/facebook/groups">
         <button>👥 Facebook Groups</button>
       </Link>

@@ -69,12 +69,13 @@ function formatOdo(odo) {
         return String(odo);
     }
 
-    const van = value / 10000;
+    // ToyotaSureHub lưu ODO theo đơn vị vạn km
+    // Ví dụ:
+    // 5.5  → 5.5 vạn km
+    // 8.6  → 8.6 vạn km
+    // 12   → 12 vạn km
 
-    return `${Number.isInteger(van)
-        ? van
-        : van.toFixed(1).replace(/\\.0$/, "")
-    } vạn km`;
+    return `${value} vạn km`;
 }
 
 function FacebookPostingQueue() {

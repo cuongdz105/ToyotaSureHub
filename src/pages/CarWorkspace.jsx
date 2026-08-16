@@ -19,173 +19,552 @@ import { saveHistory } from "../ai/history/historyService";
 import CarActionBar from "../components/CarWorkspace/CarActionBar";
 import CarInfo from "../components/CarWorkspace/CarInfo";
 import { generateAll } from "../services/aiBatchService";
-import CampaignEngine from "../engine/CampaignEngine";
 import MarketingCenter from "../components/CarWorkspace/MarketingCenter";
 import WorkspaceCard from "../components/CarWorkspace/Card/WorkspaceCard";
 import AICenter from "../components/CarWorkspace/AICenter";
 
+import {
+  findResearchSamples,
+  buildResearchContext,
+} from "../services/contentResearchService";
+
+
 function CarWorkspace() {
   const { id } = useParams();
 
-  const [car, setCar] = useState(() => getCarById(id));
+  const [car, setCar] =
+    useState(() => getCarById(id));
 
-  const [showAI, setShowAI] = useState(false);
-  const [aiTitle, setAiTitle] = useState("");
-  const [aiContent, setAiContent] = useState("");
-  const [loadingAI, setLoadingAI] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
-  const [regenerateAction, setRegenerateAction] = useState(null);
+  const [showAI, setShowAI] =
+    useState(false);
+
+  const [aiTitle, setAiTitle] =
+    useState("");
+
+  const [aiContent, setAiContent] =
+    useState("");
+
+  const [loadingAI, setLoadingAI] =
+    useState(false);
+
+  const [showMenu, setShowMenu] =
+    useState(false);
+
+  const [regenerateAction, setRegenerateAction] =
+    useState(null);
+
+
+  // =======================================
+  // REFRESH XE
+  // =======================================
 
   const refreshCar = () => {
-    const updatedCar = getCarById(id);
+
+    const updatedCar =
+      getCarById(id);
+
     if (updatedCar) {
+
       setCar(updatedCar);
+
     }
+
   };
 
-  const handleYoutubeAI = async () => {
-    setLoadingAI(true);
-    setShowAI(true);
-    setRegenerateAction(() => handleYoutubeAI);
 
-    try {
-      const result = await generateYoutube(car);
+  // =======================================
+  // RESEARCH CONTEXT
+  // =======================================
 
-      updateCar(car.id, {
-        aiContent: {
-          ...(car.aiContent || {}),
-          youtube: result,
-        },
-      });
+  const getResearchContext =
+    async (platform) => {
 
-      refreshCar();
+      const samples =
+        await findResearchSamples(
+          car,
+          platform,
+          5
+        );
 
-      setAiTitle("YouTube AI");
-      setAiContent(result);
+      return buildResearchContext(
+        samples
+      );
 
-      saveHistory({
-        type: "YouTube",
-        title: "YouTube AI",
-        car: `${car.brand} ${car.model} ${car.year}`,
-        content: result,
-      });
-    } catch (error) {
-      console.error(error);
-      setAiTitle("Lỗi");
-      setAiContent("Không thể tạo nội dung AI.");
-    } finally {
-      setLoadingAI(false);
-    }
-  };
+    };
 
-  const handleToyotaAI = async () => {
-    try {
+
+  // =======================================
+  // YOUTUBE AI + RESEARCH
+  // =======================================
+
+  const handleYoutubeAI =
+    async () => {
+
       setLoadingAI(true);
+
       setShowAI(true);
-      setRegenerateAction(() => handleToyotaAI);
 
-      const result = await generateFacebookPost(car);
-
-      updateCar(car.id, {
-        aiContent: {
-          ...(car.aiContent || {}),
-          facebook: result,
-        },
-      });
-
-      refreshCar();
-
-      setAiTitle("🤖 Toyota AI - Facebook");
-      setAiContent(result);
-
-      saveHistory({
-        type: "Facebook",
-        title: "🤖 Toyota AI - Facebook",
-        car: `${car.brand} ${car.model} ${car.year}`,
-        content: result,
-      });
-    } catch (error) {
-      console.error(error);
-      setAiTitle("Lỗi");
-      setAiContent("Không thể tạo nội dung AI.");
-    } finally {
-      setLoadingAI(false);
-    }
-  };
-
-  const handleTikTokAI = async () => {
-
-    setLoadingAI(false);
-
-  };
-
-  const handleSEOAI = async () => {
-
-    setLoadingAI(true);
-    setShowAI(true);
-
-    const result = await generateSEO(car);
-
-    updateCar(car.id, {
-      aiContent: {
-        ...(car.aiContent || {}),
-        seo: result,
-      },
-    });
-
-    refreshCar();
-
-    setAiTitle("📰 SEO AI");
-
-    setAiContent(result);
-    saveHistory({
-      type: "SEO",
-      title: "SEO AI",
-      car: `${car.brand} ${car.model} ${car.year}`,
-      content: result,
-    });
-
-    setLoadingAI(false);
-
-  };
-
-  const handleThumbnailAI = async () => {
-
-    setLoadingAI(true);
-    setShowAI(true);
-
-    const result = await generateThumbnail(car);
+      setRegenerateAction(
+        () => handleYoutubeAI
+      );
 
 
-    updateCar(car.id, {
-      aiContent: {
-        ...(car.aiContent || {}),
-        thumbnail: result,
-      },
-    });
+      try {
 
-    refreshCar();
+        console.log(
+          "🔎 Đang tìm YouTube Research..."
+        );
 
-    setAiTitle("🖼 Thumbnail AI");
 
-    setAiContent(result);
+        const researchContext =
+          await getResearchContext(
+            "youtube"
+          );
 
-    saveHistory({
-      type: "Thumbnail",
-      title: "🖼 Thumbnail AI",
-      car: `${car.brand} ${car.model} ${car.year}`,
-      content: result,
-    });
 
-    setLoadingAI(false);
+        console.log(
+          "📚 YouTube Research Context:",
+          researchContext
+        );
 
-  };
 
-  const handleCopyAll = () => {
-    const ai = car.aiContent || {};
+        const result =
+          await generateYoutube(
+            car,
+            researchContext
+          );
 
-    const content =
-      `📘 FACEBOOK
+
+        updateCar(
+          car.id,
+          {
+            aiContent: {
+              ...(car.aiContent || {}),
+              youtube: result,
+            },
+          }
+        );
+
+
+        refreshCar();
+
+
+        setAiTitle(
+          "▶️ YouTube AI + Research"
+        );
+
+
+        setAiContent(
+          result
+        );
+
+
+        saveHistory({
+          type: "YouTube",
+
+          title:
+            "YouTube AI + Research",
+
+          car:
+            `${car.brand} ${car.model} ${car.year}`,
+
+          content:
+            result,
+        });
+
+
+      } catch (error) {
+
+        console.error(
+          "YouTube AI Error:",
+          error
+        );
+
+
+        setAiTitle(
+          "Lỗi"
+        );
+
+
+        setAiContent(
+          "Không thể tạo nội dung YouTube AI."
+        );
+
+
+      } finally {
+
+        setLoadingAI(false);
+
+      }
+
+    };
+
+
+  // =======================================
+  // FACEBOOK AI
+  // =======================================
+
+  const handleToyotaAI =
+    async () => {
+
+      try {
+
+        setLoadingAI(true);
+
+        setShowAI(true);
+
+        setRegenerateAction(
+          () => handleToyotaAI
+        );
+
+
+        const result =
+          await generateFacebookPost(
+            car
+          );
+
+
+        updateCar(
+          car.id,
+          {
+            aiContent: {
+              ...(car.aiContent || {}),
+              facebook: result,
+            },
+          }
+        );
+
+
+        refreshCar();
+
+
+        setAiTitle(
+          "🤖 Toyota AI - Facebook"
+        );
+
+
+        setAiContent(
+          result
+        );
+
+
+        saveHistory({
+          type: "Facebook",
+
+          title:
+            "🤖 Toyota AI - Facebook",
+
+          car:
+            `${car.brand} ${car.model} ${car.year}`,
+
+          content:
+            result,
+        });
+
+
+      } catch (error) {
+
+        console.error(
+          "Facebook AI Error:",
+          error
+        );
+
+
+        setAiTitle(
+          "Lỗi"
+        );
+
+
+        setAiContent(
+          "Không thể tạo nội dung AI."
+        );
+
+
+      } finally {
+
+        setLoadingAI(false);
+
+      }
+
+    };
+
+
+  // =======================================
+  // TIKTOK AI + RESEARCH
+  // =======================================
+
+  const handleTikTokAI =
+    async () => {
+
+      setLoadingAI(true);
+
+      setShowAI(true);
+
+      setRegenerateAction(
+        () => handleTikTokAI
+      );
+
+
+      try {
+
+        console.log(
+          "🔎 Đang tìm TikTok Research..."
+        );
+
+
+        const researchContext =
+          await getResearchContext(
+            "tiktok"
+          );
+
+
+        console.log(
+          "📚 TikTok Research Context:",
+          researchContext
+        );
+
+
+        const result =
+          await generateTikTok(
+            car,
+            researchContext
+          );
+
+
+        updateCar(
+          car.id,
+          {
+            aiContent: {
+              ...(car.aiContent || {}),
+              tiktok: result,
+            },
+          }
+        );
+
+
+        refreshCar();
+
+
+        setAiTitle(
+          "🎵 TikTok AI + Research"
+        );
+
+
+        setAiContent(
+          result
+        );
+
+
+        saveHistory({
+          type: "TikTok",
+
+          title:
+            "TikTok AI + Research",
+
+          car:
+            `${car.brand} ${car.model} ${car.year}`,
+
+          content:
+            result,
+        });
+
+
+      } catch (error) {
+
+        console.error(
+          "TikTok AI Error:",
+          error
+        );
+
+
+        setAiTitle(
+          "Lỗi"
+        );
+
+
+        setAiContent(
+          "Không thể tạo nội dung TikTok AI."
+        );
+
+
+      } finally {
+
+        setLoadingAI(false);
+
+      }
+
+    };
+
+
+  // =======================================
+  // SEO AI
+  // =======================================
+
+  const handleSEOAI =
+    async () => {
+
+      setLoadingAI(true);
+
+      setShowAI(true);
+
+
+      try {
+
+        const result =
+          await generateSEO(
+            car
+          );
+
+
+        updateCar(
+          car.id,
+          {
+            aiContent: {
+              ...(car.aiContent || {}),
+              seo: result,
+            },
+          }
+        );
+
+
+        refreshCar();
+
+
+        setAiTitle(
+          "📰 SEO AI"
+        );
+
+
+        setAiContent(
+          result
+        );
+
+
+        saveHistory({
+          type: "SEO",
+
+          title:
+            "SEO AI",
+
+          car:
+            `${car.brand} ${car.model} ${car.year}`,
+
+          content:
+            result,
+        });
+
+
+      } catch (error) {
+
+        console.error(
+          "SEO AI Error:",
+          error
+        );
+
+
+        setAiTitle(
+          "Lỗi"
+        );
+
+
+        setAiContent(
+          "Không thể tạo SEO AI."
+        );
+
+
+      } finally {
+
+        setLoadingAI(false);
+
+      }
+
+    };
+
+
+  // =======================================
+  // THUMBNAIL AI
+  // =======================================
+
+  const handleThumbnailAI =
+    async () => {
+
+      setLoadingAI(true);
+
+      setShowAI(true);
+
+
+      try {
+
+        const result =
+          await generateThumbnail(
+            car
+          );
+
+
+        updateCar(
+          car.id,
+          {
+            aiContent: {
+              ...(car.aiContent || {}),
+              thumbnail: result,
+            },
+          }
+        );
+
+
+        refreshCar();
+
+
+        setAiTitle(
+          "🖼 Thumbnail AI"
+        );
+
+
+        setAiContent(
+          result
+        );
+
+
+      } catch (error) {
+
+        console.error(
+          "Thumbnail AI Error:",
+          error
+        );
+
+
+        setAiTitle(
+          "Lỗi"
+        );
+
+
+        setAiContent(
+          "Không thể tạo Thumbnail AI."
+        );
+
+
+      } finally {
+
+        setLoadingAI(false);
+
+      }
+
+    };
+
+
+  // =======================================
+  // COPY ALL
+  // =======================================
+
+  const handleCopyAll =
+    () => {
+
+      const ai =
+        car.aiContent || {};
+
+
+      const content =
+        `📘 FACEBOOK
 ${ai.facebook || "Chưa có"}
 
 ==============================
@@ -209,203 +588,499 @@ ${ai.seo || "Chưa có"}
 ${ai.thumbnail || "Chưa có"}
 `;
 
-    navigator.clipboard.writeText(content);
 
-    alert("✅ Đã copy toàn bộ AI!");
-  };
+      navigator.clipboard
+        .writeText(
+          content
+        );
 
-  const handleDownloadAI = () => {
 
-
-    const blob = new Blob([aiContent], {
-      type: "text/plain;charset=utf-8",
-    });
-
-    const url = URL.createObjectURL(blob);
-
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${aiTitle}.txt`;
-
-    document.body.appendChild(link);
-    link.click();
-
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  const openSavedAI = (type) => {
-    const ai = car.aiContent || {};
-
-    const content = ai[type];
-
-    if (!content) {
-      alert("Chưa có nội dung.");
-      return;
-    }
-
-    setAiTitle(`🤖 ${type.toUpperCase()}`);
-
-    setAiContent(content);
-
-    setLoadingAI(false);
-
-    setShowAI(true);
-  };
-
-  const handleGenerateAll = async () => {
-    try {
-      setLoadingAI(true);
-
-      const result = await generateAll(car);
-
-      updateCar(car.id, {
-        aiContent: result,
-      });
-
-      setAiTitle("🚀 Generate All");
-
-      setAiContent(
-        "✅ Đã tạo Facebook\n" +
-        "✅ Đã tạo TikTok\n" +
-        "✅ Đã tạo YouTube\n" +
-        "✅ Đã tạo SEO\n" +
-        "✅ Đã tạo Thumbnail"
+      alert(
+        "✅ Đã copy toàn bộ AI!"
       );
 
-      setShowAI(true);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingAI(false);
-    }
-  };
+    };
+
+
+  // =======================================
+  // DOWNLOAD
+  // =======================================
+
+  const handleDownloadAI =
+    () => {
+
+      const blob =
+        new Blob(
+          [aiContent],
+          {
+            type:
+              "text/plain;charset=utf-8",
+          }
+        );
+
+
+      const url =
+        URL.createObjectURL(
+          blob
+        );
+
+
+      const link =
+        document.createElement(
+          "a"
+        );
+
+
+      link.href =
+        url;
+
+
+      link.download =
+        `${aiTitle}.txt`;
+
+
+      document.body.appendChild(
+        link
+      );
+
+
+      link.click();
+
+
+      document.body.removeChild(
+        link
+      );
+
+
+      URL.revokeObjectURL(
+        url
+      );
+
+    };
+
+
+  // =======================================
+  // OPEN SAVED AI
+  // =======================================
+
+  const openSavedAI =
+    (type) => {
+
+      const ai =
+        car.aiContent || {};
+
+
+      const content =
+        ai[type];
+
+
+      if (!content) {
+
+        alert(
+          "Chưa có nội dung."
+        );
+
+        return;
+
+      }
+
+
+      setAiTitle(
+        `🤖 ${type.toUpperCase()}`
+      );
+
+
+      setAiContent(
+        content
+      );
+
+
+      setLoadingAI(
+        false
+      );
+
+
+      setShowAI(
+        true
+      );
+
+    };
+
+
+  // =======================================
+  // GENERATE ALL
+  // =======================================
+
+  const handleGenerateAll =
+    async () => {
+
+      try {
+
+        setLoadingAI(
+          true
+        );
+
+
+        const result =
+          await generateAll(
+            car
+          );
+
+
+        updateCar(
+          car.id,
+          {
+            aiContent:
+              result,
+          }
+        );
+
+
+        setAiTitle(
+          "🚀 Generate All"
+        );
+
+
+        setAiContent(
+          "✅ Đã tạo Facebook\n" +
+          "✅ Đã tạo TikTok\n" +
+          "✅ Đã tạo YouTube\n" +
+          "✅ Đã tạo SEO\n" +
+          "✅ Đã tạo Thumbnail"
+        );
+
+
+        setShowAI(
+          true
+        );
+
+
+      } catch (err) {
+
+        console.error(
+          err
+        );
+
+      } finally {
+
+        setLoadingAI(
+          false
+        );
+
+      }
+
+    };
+
+
+  // =======================================
+  // NO CAR
+  // =======================================
 
   if (!car) {
+
     return (
 
       <div className="app">
 
         <main className="content">
-          <h2>❌ Không tìm thấy xe</h2>
+
+          <h2>
+            ❌ Không tìm thấy xe
+          </h2>
+
         </main>
+
       </div>
+
     );
+
   }
 
+
+  // =======================================
+  // UI
+  // =======================================
+
   return (
+
     <div className="app">
 
-
       <main className="content">
-        <h1>🚗 Car Workspace</h1>
-        <p>Quản lý toàn bộ nội dung của chiếc xe.</p>
+
+        <h1>
+          🚗 Car Workspace
+        </h1>
+
+        <p>
+          Quản lý toàn bộ nội dung
+          của chiếc xe.
+        </p>
 
 
         <CarActionBar
-          onBack={() => { }}
-          onEdit={() => { }}
-          onDelete={() => { }}
-          onAI={() => setShowMenu(true)}
+
+          onBack={() => {}}
+
+          onEdit={() => {}}
+
+          onDelete={() => {}}
+
+          onAI={() =>
+            setShowMenu(
+              true
+            )
+          }
+
 
           onFacebook={() => {
-            console.log("Facebook", car);
+
+            console.log(
+              "Facebook",
+              car
+            );
+
           }}
+
 
           onTikTok={() => {
-            console.log("TikTok", car);
+
+            console.log(
+              "TikTok",
+              car
+            );
+
           }}
+
 
           onYoutube={() => {
-            console.log("YouTube", car);
+
+            console.log(
+              "YouTube",
+              car
+            );
+
           }}
+
         />
 
-        <WorkspaceCard title="📦 Thông tin xe">
+
+        <WorkspaceCard
+          title="📦 Thông tin xe"
+        >
 
           <CarInfo
             car={car}
-            onViewAI={openSavedAI}
+            onViewAI={
+              openSavedAI
+            }
           />
 
         </WorkspaceCard>
-        <WorkspaceCard title="📸 Hình ảnh">
-          <Gallery images={car.images} />
+
+
+        <WorkspaceCard
+          title="📸 Hình ảnh"
+        >
+
+          <Gallery
+            images={
+              car.images
+            }
+          />
+
         </WorkspaceCard>
 
-        <WorkspaceCard title="🤖 AI Center">
+
+        <WorkspaceCard
+          title="🤖 AI Center"
+        >
+
           <AICenter
-    car={car}
-    onViewAI={openSavedAI}
-    onGenerateAll={handleGenerateAll}
-    onSalesChat={() => {
-        alert("🚧 AI Sales Assistant đang phát triển...");
-    }}
-/>
+
+            car={
+              car
+            }
+
+            onViewAI={
+              openSavedAI
+            }
+
+            onGenerateAll={
+              handleGenerateAll
+            }
+
+            onSalesChat={() => {
+
+              alert(
+                "🚧 AI Sales Assistant đang phát triển..."
+              );
+
+            }}
+
+          />
+
         </WorkspaceCard>
 
-        <WorkspaceCard title="📣 Marketing">
 
-          <MarketingCenter car={car} />
+        <WorkspaceCard
+          title="📣 Marketing"
+        >
+
+          <MarketingCenter
+            car={
+              car
+            }
+          />
 
         </WorkspaceCard>
+
       </main>
 
+
+      {/* =====================================
+          AI MENU
+      ===================================== */}
+
       <AIMenu
-        open={showMenu}
-        onClose={() => setShowMenu(false)}
+
+        open={
+          showMenu
+        }
+
+        onClose={() =>
+          setShowMenu(
+            false
+          )
+        }
+
 
         onGenerateAll={() => {
-          setShowMenu(false);
+
+          setShowMenu(
+            false
+          );
+
           handleGenerateAll();
 
-
         }}
+
 
         onFacebook={() => {
-          setShowMenu(false);
+
+          setShowMenu(
+            false
+          );
+
           handleToyotaAI();
+
         }}
+
 
         onYoutube={() => {
-          setShowMenu(false);
+
+          setShowMenu(
+            false
+          );
+
           handleYoutubeAI();
+
         }}
+
 
         onTikTok={() => {
-          setShowMenu(false);
+
+          setShowMenu(
+            false
+          );
+
           handleTikTokAI();
+
         }}
+
 
         onSEO={() => {
-          setShowMenu(false);
+
+          setShowMenu(
+            false
+          );
+
           handleSEOAI();
+
         }}
 
+
         onThumbnail={() => {
-          setShowMenu(false);
+
+          setShowMenu(
+            false
+          );
+
           handleThumbnailAI();
+
         }}
+
       />
 
 
+      {/* =====================================
+          AI RESULT
+      ===================================== */}
+
       <AIResultModal
-        open={showAI}
-        title={aiTitle}
-        content={aiContent}
-        loading={loadingAI}
-        onClose={() => setShowAI(false)}
+
+        open={
+          showAI
+        }
+
+        title={
+          aiTitle
+        }
+
+        content={
+          aiContent
+        }
+
+        loading={
+          loadingAI
+        }
+
+        onClose={() =>
+          setShowAI(
+            false
+          )
+        }
+
         onCopy={() => {
-          navigator.clipboard.writeText(aiContent);
-          alert("✅ Đã copy nội dung!");
+
+          navigator.clipboard
+            .writeText(
+              aiContent
+            );
+
+          alert(
+            "✅ Đã copy nội dung!"
+          );
+
         }}
-        onCopyAll={handleCopyAll}
-        onDownload={handleDownloadAI}
-        onRegenerate={regenerateAction}
+
+        onCopyAll={
+          handleCopyAll
+        }
+
+        onDownload={
+          handleDownloadAI
+        }
+
+        onRegenerate={
+          regenerateAction
+        }
+
       />
 
     </div>
+
   );
+
 }
 
 export default CarWorkspace;

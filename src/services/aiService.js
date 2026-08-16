@@ -1,6 +1,6 @@
 // ================================
 // Toyota AI Service
-// Version 2.0
+// Version 2.2
 // ================================
 
 import { buildPrompt } from "../ai/engine/promptBuilder";
@@ -16,102 +16,180 @@ import salesChatPrompt from "../ai/prompts/salesChat";
 import { saveHistory } from "./historyService";
 import { addMemory } from "../ai/memory/memoryEngine";
 
-async function generateContent(car, type, template) {
+import {
+  formatOdoVan,
+} from "../utils/builders";
 
-    const prompt = buildPrompt(car, template);
 
-    const result = await runAI(prompt, car);
+// =======================================
+// CHUẨN HÓA DỮ LIỆU XE CHO AI
+// =======================================
 
-    saveHistory({
-        type,
-        model: "gpt-5.5",
-        carId: car.id,
-        carName: `${car.brand} ${car.model} ${car.year}`,
-        prompt,
-        result,
-    });
+function buildAICar(car) {
+  return {
+    ...car,
 
-    console.log("AI Result:", result);
+    odo:
+      formatOdoVan(car?.odo) ||
+      "",
+  };
+}
 
-addMemory({
+
+// =======================================
+// GENERATE CONTENT
+// =======================================
+
+async function generateContent(
+  car,
+  type,
+  template,
+  researchContext = ""
+) {
+  const aiCar =
+    buildAICar(car);
+
+  const prompt =
+    buildPrompt(
+      aiCar,
+      template,
+      researchContext
+    );
+
+  const result =
+    await runAI(
+      prompt,
+      aiCar
+    );
+
+  saveHistory({
     type,
-    car: `${car.brand} ${car.model}`,
-    summary: result?.substring(0, 200) || "",
-});
-   
-    return result;
+
+    model:
+      "gpt-5.5",
+
+    carId:
+      car.id,
+
+    carName:
+      `${car.brand} ${car.model} ${car.year}`,
+
+    prompt,
+
+    result,
+  });
+
+  console.log(
+    "AI Result:",
+    result
+  );
+
+  addMemory({
+    type,
+
+    car:
+      `${car.brand} ${car.model}`,
+
+    summary:
+      result?.substring(
+        0,
+        200
+      ) || "",
+  });
+
+  return result;
 }
 
+
 // =======================================
-// Facebook
+// FACEBOOK
 // =======================================
 
-export async function generateFacebookPost(car) {
-    return generateContent(
-        car,
-        "facebook",
-        facebookPrompt
-    );
+export async function generateFacebookPost(
+  car
+) {
+  return generateContent(
+    car,
+    "facebook",
+    facebookPrompt
+  );
 }
 
+
 // =======================================
-// Youtube
+// YOUTUBE
 // =======================================
 
-export async function generateYoutube(car) {
-    return generateContent(
-        car,
-        "youtube",
-        youtubePrompt
-    );
+export async function generateYoutube(
+  car,
+  researchContext = ""
+) {
+  return generateContent(
+    car,
+    "youtube",
+    youtubePrompt,
+    researchContext
+  );
 }
 
+
 // =======================================
-// TikTok
+// TIKTOK
 // =======================================
 
-export async function generateTikTok(car) {
-    return generateContent(
-        car,
-        "tiktok",
-        tiktokPrompt
-    );
+export async function generateTikTok(
+  car,
+  researchContext = ""
+) {
+  return generateContent(
+    car,
+    "tiktok",
+    tiktokPrompt,
+    researchContext
+  );
 }
+
 
 // =======================================
 // SEO
 // =======================================
 
-export async function generateSEO(car) {
-    return generateContent(
-        car,
-        "seo",
-        seoPrompt
-    );
+export async function generateSEO(
+  car
+) {
+  return generateContent(
+    car,
+    "seo",
+    seoPrompt
+  );
 }
 
+
 // =======================================
-// Thumbnail
+// THUMBNAIL
 // =======================================
 
-export async function generateThumbnail(car) {
-    return generateContent(
-        car,
-        "thumbnail",
-        thumbnailPrompt
-    );
+export async function generateThumbnail(
+  car
+) {
+  return generateContent(
+    car,
+    "thumbnail",
+    thumbnailPrompt
+  );
 }
 
+
 // =======================================
-// AI Sales Chat
+// AI SALES CHAT
 // =======================================
 
-export async function generateSalesChat(car) {
-
-    return generateContent(
-        car,
-        "sales-chat",
-        salesChatPrompt
-    );
-
+export async function generateSalesChat(
+  car
+) {
+  return generateContent(
+    car,
+    "sales-chat",
+    salesChatPrompt
+  );
 }
