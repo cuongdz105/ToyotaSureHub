@@ -1,6 +1,6 @@
 // ================================
 // Toyota AI Service
-// Version 2.2
+// Version 2.3
 // ================================
 
 import { buildPrompt } from "../ai/engine/promptBuilder";
@@ -9,6 +9,8 @@ import { runAI } from "../ai/engine/aiEngine";
 import facebookPrompt from "../ai/prompts/facebook";
 import youtubePrompt from "../ai/prompts/youtube";
 import tiktokPrompt from "../ai/prompts/tiktok";
+import youtubePostPrompt from "../ai/prompts/youtubePost";
+import tiktokPostPrompt from "../ai/prompts/tiktokPost";
 import seoPrompt from "../ai/prompts/seo";
 import thumbnailPrompt from "../ai/prompts/thumbnail";
 import salesChatPrompt from "../ai/prompts/salesChat";
@@ -26,6 +28,7 @@ import {
 // =======================================
 
 function buildAICar(car) {
+
   return {
     ...car,
 
@@ -33,6 +36,7 @@ function buildAICar(car) {
       formatOdoVan(car?.odo) ||
       "",
   };
+
 }
 
 
@@ -46,8 +50,10 @@ async function generateContent(
   template,
   researchContext = ""
 ) {
+
   const aiCar =
     buildAICar(car);
+
 
   const prompt =
     buildPrompt(
@@ -56,13 +62,16 @@ async function generateContent(
       researchContext
     );
 
+
   const result =
     await runAI(
       prompt,
       aiCar
     );
 
+
   saveHistory({
+
     type,
 
     model:
@@ -77,14 +86,18 @@ async function generateContent(
     prompt,
 
     result,
+
   });
+
 
   console.log(
     "AI Result:",
     result
   );
 
+
   addMemory({
+
     type,
 
     car:
@@ -95,9 +108,12 @@ async function generateContent(
         0,
         200
       ) || "",
+
   });
 
+
   return result;
+
 }
 
 
@@ -108,11 +124,17 @@ async function generateContent(
 export async function generateFacebookPost(
   car
 ) {
+
   return generateContent(
+
     car,
+
     "facebook",
+
     facebookPrompt
+
   );
+
 }
 
 
@@ -120,16 +142,51 @@ export async function generateFacebookPost(
 // YOUTUBE
 // =======================================
 
-export async function generateYoutube(
+// =======================================
+// YOUTUBE - KỊCH BẢN QUAY
+// =======================================
+
+export async function generateYoutubeScript(
   car,
   researchContext = ""
 ) {
+
   return generateContent(
+
     car,
-    "youtube",
+
+    "youtube-script",
+
     youtubePrompt,
+
     researchContext
+
   );
+
+}
+
+
+// =======================================
+// YOUTUBE - NỘI DUNG ĐĂNG
+// =======================================
+
+export async function generateYoutubePost(
+  car,
+  researchContext = ""
+) {
+
+  return generateContent(
+
+    car,
+
+    "youtube-post",
+
+    youtubePostPrompt,
+
+    researchContext
+
+  );
+
 }
 
 
@@ -137,18 +194,52 @@ export async function generateYoutube(
 // TIKTOK
 // =======================================
 
-export async function generateTikTok(
+// =======================================
+// TIKTOK - KỊCH BẢN QUAY
+// =======================================
+
+export async function generateTikTokScript(
   car,
   researchContext = ""
 ) {
+
   return generateContent(
+
     car,
-    "tiktok",
+
+    "tiktok-script",
+
     tiktokPrompt,
+
     researchContext
+
   );
+
 }
 
+
+// =======================================
+// TIKTOK - NỘI DUNG ĐĂNG
+// =======================================
+
+export async function generateTikTokPost(
+  car,
+  researchContext = ""
+) {
+
+  return generateContent(
+
+    car,
+
+    "tiktok-post",
+
+    tiktokPostPrompt,
+
+    researchContext
+
+  );
+
+}
 
 // =======================================
 // SEO
@@ -157,11 +248,17 @@ export async function generateTikTok(
 export async function generateSEO(
   car
 ) {
+
   return generateContent(
+
     car,
+
     "seo",
+
     seoPrompt
+
   );
+
 }
 
 
@@ -172,11 +269,17 @@ export async function generateSEO(
 export async function generateThumbnail(
   car
 ) {
+
   return generateContent(
+
     car,
+
     "thumbnail",
+
     thumbnailPrompt
+
   );
+
 }
 
 
@@ -187,9 +290,15 @@ export async function generateThumbnail(
 export async function generateSalesChat(
   car
 ) {
+
   return generateContent(
+
     car,
+
     "sales-chat",
+
     salesChatPrompt
+
   );
+
 }

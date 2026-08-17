@@ -10,9 +10,13 @@ function AIMenu({
 
     onFacebook,
 
-    onYoutube,
+    onYoutubeScript,
 
-    onTikTok,
+    onYoutubePost,
+
+    onTikTokScript,
+
+    onTikTokPost,
 
     onSEO,
 
@@ -30,39 +34,259 @@ function AIMenu({
 
                 <h2>🤖 Toyota AI</h2>
 
-                <div className="ai-card" onClick={onGenerateAll}>
-    <h3>🚀 Generate All</h3>
-    <p>Tạo toàn bộ nội dung AI cho chiếc xe.</p>
-</div>
 
-               <div className="ai-card" onClick={onFacebook}>
-    <h3>📱 Facebook</h3>
-    <p>Viết bài bán xe chuẩn hội nhóm.</p>
-</div>
+                {/* =================================
+                    GENERATE ALL
+                ================================= */}
 
-<div className="ai-card" onClick={onYoutube}>
-    <h3>🎥 YouTube</h3>
-    <p>Tiêu đề + mô tả + hashtag SEO.</p>
-</div>
+                <div
+                    className="ai-card"
+                    onClick={onGenerateAll}
+                >
 
-<div className="ai-card" onClick={onTikTok}>
-    <h3>🎬 TikTok</h3>
-    <p>Kịch bản video 60 giây.</p>
-</div>
+                    <h3>
+                        🚀 Generate All
+                    </h3>
 
-<div className="ai-card" onClick={onSEO}>
-    <h3>📰 SEO</h3>
-    <p>Bài viết chuẩn Google.</p>
-</div>
+                    <p>
+                        Tạo toàn bộ nội dung AI
+                        cho chiếc xe.
+                    </p>
 
-<div className="ai-card" onClick={onThumbnail}>
-    <h3>🖼 Thumbnail</h3>
-    <p>Tiêu đề thumbnail tăng CTR.</p>
-</div>
+                </div>
+
+
+                {/* =================================
+                    FACEBOOK
+                ================================= */}
+
+                <div
+                    className="ai-card"
+                    onClick={onFacebook}
+                >
+
+                    <h3>
+                        📱 Facebook
+                    </h3>
+
+                    <p>
+                        Viết bài bán xe
+                        chuẩn hội nhóm.
+                    </p>
+
+                </div>
+
+
+                {/* =================================
+                    YOUTUBE
+                ================================= */}
+
+                <div className="ai-card">
+
+                    <h3>
+                        🎥 YouTube
+                    </h3>
+
+                    <p>
+                        Chọn loại nội dung
+                        cần tạo.
+                    </p>
+
+
+                    <div
+                        style={{
+                            display: "flex",
+                            gap: "8px",
+                            marginTop: "10px",
+                            flexWrap: "wrap",
+                        }}
+                    >
+
+                        <button
+                            type="button"
+                            onClick={(event) => {
+
+                                event.stopPropagation();
+
+                                onYoutubeScript();
+
+                            }}
+                            style={{
+                                flex: 1,
+                                minWidth: "150px",
+                                padding: "10px",
+                                border: "1px solid #ddd",
+                                borderRadius: "8px",
+                                background: "#fff",
+                                cursor: "pointer",
+                                fontWeight: 600,
+                            }}
+                        >
+
+                            🎬 Kịch bản quay
+
+                        </button>
+
+
+                        <button
+                            type="button"
+                            onClick={(event) => {
+
+                                event.stopPropagation();
+
+                                onYoutubePost();
+
+                            }}
+                            style={{
+                                flex: 1,
+                                minWidth: "150px",
+                                padding: "10px",
+                                border: "1px solid #ddd",
+                                borderRadius: "8px",
+                                background: "#fff",
+                                cursor: "pointer",
+                                fontWeight: 600,
+                            }}
+                        >
+
+                            📝 Nội dung đăng
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                {/* =================================
+                    TIKTOK
+                ================================= */}
+
+                <div className="ai-card">
+
+                    <h3>
+                        🎵 TikTok
+                    </h3>
+
+                    <p>
+                        Chọn loại nội dung
+                        cần tạo.
+                    </p>
+
+
+                    <div
+                        style={{
+                            display: "flex",
+                            gap: "8px",
+                            marginTop: "10px",
+                            flexWrap: "wrap",
+                        }}
+                    >
+
+                        <button
+                            type="button"
+                            onClick={(event) => {
+
+                                event.stopPropagation();
+
+                                onTikTokScript();
+
+                            }}
+                            style={{
+                                flex: 1,
+                                minWidth: "150px",
+                                padding: "10px",
+                                border: "1px solid #ddd",
+                                borderRadius: "8px",
+                                background: "#fff",
+                                cursor: "pointer",
+                                fontWeight: 600,
+                            }}
+                        >
+
+                            🎬 Kịch bản quay
+
+                        </button>
+
+
+                        <button
+                            type="button"
+                            onClick={(event) => {
+
+                                event.stopPropagation();
+
+                                onTikTokPost();
+
+                            }}
+                            style={{
+                                flex: 1,
+                                minWidth: "150px",
+                                padding: "10px",
+                                border: "1px solid #ddd",
+                                borderRadius: "8px",
+                                background: "#fff",
+                                cursor: "pointer",
+                                fontWeight: 600,
+                            }}
+                        >
+
+                            📝 Nội dung đăng
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                {/* =================================
+                    SEO
+                ================================= */}
+
+                <div
+                    className="ai-card"
+                    onClick={onSEO}
+                >
+
+                    <h3>
+                        📰 SEO
+                    </h3>
+
+                    <p>
+                        Bài viết chuẩn Google.
+                    </p>
+
+                </div>
+
+
+                {/* =================================
+                    THUMBNAIL
+                ================================= */}
+
+                <div
+                    className="ai-card"
+                    onClick={onThumbnail}
+                >
+
+                    <h3>
+                        🖼 Thumbnail
+                    </h3>
+
+                    <p>
+                        Tiêu đề thumbnail
+                        tăng CTR.
+                    </p>
+
+                </div>
+
 
                 <br />
 
-                <button onClick={onClose}>
+
+                <button
+                    type="button"
+                    onClick={onClose}
+                >
                     Đóng
                 </button>
 

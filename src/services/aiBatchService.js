@@ -1,7 +1,9 @@
 import {
   generateFacebookPost,
-  generateTikTok,
-  generateYoutube,
+  generateYoutubeScript,
+  generateYoutubePost,
+  generateTikTokScript,
+  generateTikTokPost,
   generateSEO,
   generateThumbnail,
 } from "./aiService";
@@ -9,9 +11,9 @@ import {
 export async function generateAll(car) {
   const facebook = await generateFacebookPost(car);
 
-  const tiktok = await generateTikTok(car);
+  const tiktok = await generateTikTokScript(car);
 
-  const youtube = await generateYoutube(car);
+  const youtube = await generateYoutubeScript(car);
 
   const seo = await generateSEO(car);
 

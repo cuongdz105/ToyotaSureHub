@@ -7,8 +7,10 @@ import "../styles/CarWorkspace.css";
 
 import {
   generateFacebookPost,
-  generateYoutube,
-  generateTikTok,
+  generateYoutubeScript,
+  generateYoutubePost,
+  generateTikTokScript,
+  generateTikTokPost,
   generateSEO,
   generateThumbnail,
 } from "../services/aiService";
@@ -30,25 +32,33 @@ import {
 
 
 function CarWorkspace() {
+
   const { id } = useParams();
+
 
   const [car, setCar] =
     useState(() => getCarById(id));
 
+
   const [showAI, setShowAI] =
     useState(false);
+
 
   const [aiTitle, setAiTitle] =
     useState("");
 
+
   const [aiContent, setAiContent] =
     useState("");
+
 
   const [loadingAI, setLoadingAI] =
     useState(false);
 
+
   const [showMenu, setShowMenu] =
     useState(false);
+
 
   const [regenerateAction, setRegenerateAction] =
     useState(null);
@@ -62,6 +72,7 @@ function CarWorkspace() {
 
     const updatedCar =
       getCarById(id);
+
 
     if (updatedCar) {
 
@@ -86,6 +97,7 @@ function CarWorkspace() {
           5
         );
 
+
       return buildResearchContext(
         samples
       );
@@ -94,25 +106,33 @@ function CarWorkspace() {
 
 
   // =======================================
-  // YOUTUBE AI + RESEARCH
+  // YOUTUBE - KỊCH BẢN QUAY
   // =======================================
 
-  const handleYoutubeAI =
+  const handleYoutubeScript =
     async () => {
 
       setLoadingAI(true);
 
       setShowAI(true);
 
+      setShowMenu(false);
+
+
+      setAiTitle(
+        "🎬 Kịch bản quay YouTube"
+      );
+
+
       setRegenerateAction(
-        () => handleYoutubeAI
+        () => handleYoutubeScript
       );
 
 
       try {
 
         console.log(
-          "🔎 Đang tìm YouTube Research..."
+          "🔎 Đang tìm Research cho kịch bản YouTube..."
         );
 
 
@@ -123,16 +143,16 @@ function CarWorkspace() {
 
 
         console.log(
-          "📚 YouTube Research Context:",
+          "📚 YouTube Script Research:",
           researchContext
         );
 
 
         const result =
-          await generateYoutube(
-            car,
-            researchContext
-          );
+  await generateYoutubeScript(
+    car,
+    researchContext
+  );
 
 
         updateCar(
@@ -140,7 +160,8 @@ function CarWorkspace() {
           {
             aiContent: {
               ...(car.aiContent || {}),
-              youtube: result,
+              youtubeScript:
+                result,
             },
           }
         );
@@ -149,34 +170,32 @@ function CarWorkspace() {
         refreshCar();
 
 
-        setAiTitle(
-          "▶️ YouTube AI + Research"
-        );
-
-
         setAiContent(
           result
         );
 
 
         saveHistory({
-          type: "YouTube",
+
+          type:
+            "YouTube Script",
 
           title:
-            "YouTube AI + Research",
+            "🎬 Kịch bản quay YouTube",
 
           car:
             `${car.brand} ${car.model} ${car.year}`,
 
           content:
             result,
+
         });
 
 
       } catch (error) {
 
         console.error(
-          "YouTube AI Error:",
+          "YouTube Script Error:",
           error
         );
 
@@ -187,9 +206,109 @@ function CarWorkspace() {
 
 
         setAiContent(
-          "Không thể tạo nội dung YouTube AI."
+          "Không thể tạo kịch bản quay YouTube."
         );
 
+      } finally {
+
+        setLoadingAI(false);
+
+      }
+
+    };
+
+
+  // =======================================
+  // YOUTUBE - NỘI DUNG ĐĂNG
+  // =======================================
+
+  const handleYoutubePost =
+    async () => {
+
+      setLoadingAI(true);
+
+      setShowAI(true);
+
+      setShowMenu(false);
+
+
+      setAiTitle(
+        "📝 Nội dung đăng YouTube"
+      );
+
+
+      setRegenerateAction(
+        () => handleYoutubePost
+      );
+
+
+      try {
+
+        const researchContext =
+  await getResearchContext(
+    "youtube"
+  );
+
+const result =
+  await generateYoutubePost(
+    car,
+    researchContext
+  );
+
+
+        updateCar(
+          car.id,
+          {
+            aiContent: {
+              ...(car.aiContent || {}),
+              youtube:
+                result,
+            },
+          }
+        );
+
+
+        refreshCar();
+
+
+        setAiContent(
+          result
+        );
+
+
+        saveHistory({
+
+          type:
+            "YouTube Post",
+
+          title:
+            "📝 Nội dung đăng YouTube",
+
+          car:
+            `${car.brand} ${car.model} ${car.year}`,
+
+          content:
+            result,
+
+        });
+
+
+      } catch (error) {
+
+        console.error(
+          "YouTube Post Error:",
+          error
+        );
+
+
+        setAiTitle(
+          "Lỗi"
+        );
+
+
+        setAiContent(
+          "Không thể tạo nội dung đăng YouTube."
+        );
 
       } finally {
 
@@ -213,6 +332,14 @@ function CarWorkspace() {
 
         setShowAI(true);
 
+        setShowMenu(false);
+
+
+        setAiTitle(
+          "🤖 Toyota AI - Facebook"
+        );
+
+
         setRegenerateAction(
           () => handleToyotaAI
         );
@@ -229,7 +356,8 @@ function CarWorkspace() {
           {
             aiContent: {
               ...(car.aiContent || {}),
-              facebook: result,
+              facebook:
+                result,
             },
           }
         );
@@ -238,18 +366,15 @@ function CarWorkspace() {
         refreshCar();
 
 
-        setAiTitle(
-          "🤖 Toyota AI - Facebook"
-        );
-
-
         setAiContent(
           result
         );
 
 
         saveHistory({
-          type: "Facebook",
+
+          type:
+            "Facebook",
 
           title:
             "🤖 Toyota AI - Facebook",
@@ -259,6 +384,7 @@ function CarWorkspace() {
 
           content:
             result,
+
         });
 
 
@@ -276,9 +402,8 @@ function CarWorkspace() {
 
 
         setAiContent(
-          "Không thể tạo nội dung AI."
+          "Không thể tạo nội dung Facebook."
         );
-
 
       } finally {
 
@@ -290,25 +415,33 @@ function CarWorkspace() {
 
 
   // =======================================
-  // TIKTOK AI + RESEARCH
+  // TIKTOK - KỊCH BẢN QUAY
   // =======================================
 
-  const handleTikTokAI =
+  const handleTikTokScript =
     async () => {
 
       setLoadingAI(true);
 
       setShowAI(true);
 
+      setShowMenu(false);
+
+
+      setAiTitle(
+        "🎬 Kịch bản quay TikTok"
+      );
+
+
       setRegenerateAction(
-        () => handleTikTokAI
+        () => handleTikTokScript
       );
 
 
       try {
 
         console.log(
-          "🔎 Đang tìm TikTok Research..."
+          "🔎 Đang tìm Research cho kịch bản TikTok..."
         );
 
 
@@ -319,16 +452,16 @@ function CarWorkspace() {
 
 
         console.log(
-          "📚 TikTok Research Context:",
+          "📚 TikTok Script Research:",
           researchContext
         );
 
 
         const result =
-          await generateTikTok(
-            car,
-            researchContext
-          );
+  await generateTikTokScript(
+    car,
+    researchContext
+  );
 
 
         updateCar(
@@ -336,7 +469,8 @@ function CarWorkspace() {
           {
             aiContent: {
               ...(car.aiContent || {}),
-              tiktok: result,
+              tiktokScript:
+                result,
             },
           }
         );
@@ -345,34 +479,32 @@ function CarWorkspace() {
         refreshCar();
 
 
-        setAiTitle(
-          "🎵 TikTok AI + Research"
-        );
-
-
         setAiContent(
           result
         );
 
 
         saveHistory({
-          type: "TikTok",
+
+          type:
+            "TikTok Script",
 
           title:
-            "TikTok AI + Research",
+            "🎬 Kịch bản quay TikTok",
 
           car:
             `${car.brand} ${car.model} ${car.year}`,
 
           content:
             result,
+
         });
 
 
       } catch (error) {
 
         console.error(
-          "TikTok AI Error:",
+          "TikTok Script Error:",
           error
         );
 
@@ -383,9 +515,8 @@ function CarWorkspace() {
 
 
         setAiContent(
-          "Không thể tạo nội dung TikTok AI."
+          "Không thể tạo kịch bản quay TikTok."
         );
-
 
       } finally {
 
@@ -397,7 +528,108 @@ function CarWorkspace() {
 
 
   // =======================================
-  // SEO AI
+  // TIKTOK - NỘI DUNG ĐĂNG
+  // =======================================
+
+  const handleTikTokPost =
+    async () => {
+
+      setLoadingAI(true);
+
+      setShowAI(true);
+
+      setShowMenu(false);
+
+
+      setAiTitle(
+        "📝 Nội dung đăng TikTok"
+      );
+
+
+      setRegenerateAction(
+        () => handleTikTokPost
+      );
+
+
+      try {
+
+       const researchContext =
+  await getResearchContext(
+    "tiktok"
+  );
+
+const result =
+  await generateTikTokPost(
+    car,
+    researchContext
+  );
+
+
+        updateCar(
+          car.id,
+          {
+            aiContent: {
+              ...(car.aiContent || {}),
+              tiktok:
+                result,
+            },
+          }
+        );
+
+
+        refreshCar();
+
+
+        setAiContent(
+          result
+        );
+
+
+        saveHistory({
+
+          type:
+            "TikTok Post",
+
+          title:
+            "📝 Nội dung đăng TikTok",
+
+          car:
+            `${car.brand} ${car.model} ${car.year}`,
+
+          content:
+            result,
+
+        });
+
+
+      } catch (error) {
+
+        console.error(
+          "TikTok Post Error:",
+          error
+        );
+
+
+        setAiTitle(
+          "Lỗi"
+        );
+
+
+        setAiContent(
+          "Không thể tạo nội dung đăng TikTok."
+        );
+
+      } finally {
+
+        setLoadingAI(false);
+
+      }
+
+    };
+
+
+  // =======================================
+  // SEO
   // =======================================
 
   const handleSEOAI =
@@ -406,6 +638,13 @@ function CarWorkspace() {
       setLoadingAI(true);
 
       setShowAI(true);
+
+      setShowMenu(false);
+
+
+      setAiTitle(
+        "📰 SEO AI"
+      );
 
 
       try {
@@ -421,7 +660,8 @@ function CarWorkspace() {
           {
             aiContent: {
               ...(car.aiContent || {}),
-              seo: result,
+              seo:
+                result,
             },
           }
         );
@@ -430,18 +670,15 @@ function CarWorkspace() {
         refreshCar();
 
 
-        setAiTitle(
-          "📰 SEO AI"
-        );
-
-
         setAiContent(
           result
         );
 
 
         saveHistory({
-          type: "SEO",
+
+          type:
+            "SEO",
 
           title:
             "SEO AI",
@@ -451,6 +688,7 @@ function CarWorkspace() {
 
           content:
             result,
+
         });
 
 
@@ -471,7 +709,6 @@ function CarWorkspace() {
           "Không thể tạo SEO AI."
         );
 
-
       } finally {
 
         setLoadingAI(false);
@@ -482,7 +719,7 @@ function CarWorkspace() {
 
 
   // =======================================
-  // THUMBNAIL AI
+  // THUMBNAIL
   // =======================================
 
   const handleThumbnailAI =
@@ -491,6 +728,13 @@ function CarWorkspace() {
       setLoadingAI(true);
 
       setShowAI(true);
+
+      setShowMenu(false);
+
+
+      setAiTitle(
+        "🖼 Thumbnail AI"
+      );
 
 
       try {
@@ -506,18 +750,14 @@ function CarWorkspace() {
           {
             aiContent: {
               ...(car.aiContent || {}),
-              thumbnail: result,
+              thumbnail:
+                result,
             },
           }
         );
 
 
         refreshCar();
-
-
-        setAiTitle(
-          "🖼 Thumbnail AI"
-        );
 
 
         setAiContent(
@@ -541,7 +781,6 @@ function CarWorkspace() {
         setAiContent(
           "Không thể tạo Thumbnail AI."
         );
-
 
       } finally {
 
@@ -569,12 +808,22 @@ ${ai.facebook || "Chưa có"}
 
 ==============================
 
-🎬 TIKTOK
+🎬 TIKTOK - KỊCH BẢN
+${ai.tiktokScript || "Chưa có"}
+
+==============================
+
+📝 TIKTOK - NỘI DUNG ĐĂNG
 ${ai.tiktok || "Chưa có"}
 
 ==============================
 
-▶️ YOUTUBE
+▶️ YOUTUBE - KỊCH BẢN
+${ai.youtubeScript || "Chưa có"}
+
+==============================
+
+📝 YOUTUBE - NỘI DUNG ĐĂNG
 ${ai.youtube || "Chưa có"}
 
 ==============================
@@ -797,10 +1046,6 @@ ${ai.thumbnail || "Chưa có"}
   }
 
 
-  // =======================================
-  // UI
-  // =======================================
-
   return (
 
     <div className="app">
@@ -956,10 +1201,6 @@ ${ai.thumbnail || "Chưa có"}
 
         onGenerateAll={() => {
 
-          setShowMenu(
-            false
-          );
-
           handleGenerateAll();
 
         }}
@@ -967,42 +1208,40 @@ ${ai.thumbnail || "Chưa có"}
 
         onFacebook={() => {
 
-          setShowMenu(
-            false
-          );
-
           handleToyotaAI();
 
         }}
 
 
-        onYoutube={() => {
+        onYoutubeScript={() => {
 
-          setShowMenu(
-            false
-          );
-
-          handleYoutubeAI();
+          handleYoutubeScript();
 
         }}
 
 
-        onTikTok={() => {
+        onYoutubePost={() => {
 
-          setShowMenu(
-            false
-          );
+          handleYoutubePost();
 
-          handleTikTokAI();
+        }}
+
+
+        onTikTokScript={() => {
+
+          handleTikTokScript();
+
+        }}
+
+
+        onTikTokPost={() => {
+
+          handleTikTokPost();
 
         }}
 
 
         onSEO={() => {
-
-          setShowMenu(
-            false
-          );
 
           handleSEOAI();
 
@@ -1010,10 +1249,6 @@ ${ai.thumbnail || "Chưa có"}
 
 
         onThumbnail={() => {
-
-          setShowMenu(
-            false
-          );
 
           handleThumbnailAI();
 
