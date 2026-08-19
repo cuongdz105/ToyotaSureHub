@@ -12,11 +12,12 @@ import AIHistory from "./pages/AIHistory";
 import MainLayout from "./layouts/MainLayout";
 import AIWorkspace from "./pages/AIWorkspace";
 import CampaignPage from "./pages/CampaignPage";
+
 import FacebookAccounts from "./pages/Facebook/FacebookAccounts";
 import FacebookGroups from "./pages/Facebook/FacebookGroups";
 import FacebookPostPreview from "./pages/Facebook/FacebookPostPreview";
-import FacebookPostingQueue
-  from "./pages/Facebook/FacebookPostingQueue";
+import FacebookPostingQueue from "./pages/Facebook/FacebookPostingQueue";
+import SupabaseCarTest from "./pages/SupabaseCarTest";
 
 // =======================================
 // CONTENT LIBRARY
@@ -24,20 +25,45 @@ import FacebookPostingQueue
 
 import ContentLibrary from "./components/ContentLibrary";
 
+// =======================================
+// SUPABASE TEST
+// =======================================
+
+import SupabaseTest from "./pages/SupabaseTest";
+
 
 function App() {
-
   return (
-
     <Routes>
+
+      {/* =================================
+          SUPABASE TEST
+      ================================= */}
+
+      <Route
+        path="/supabase-test"
+        element={<SupabaseTest />}
+      />
+
+
+      {/* =================================
+          MAIN APPLICATION
+      ================================= */}
+
+<Route
+  path="/supabase-car-test"
+  element={<SupabaseCarTest />}
+/>
 
       <Route element={<MainLayout />}>
 
+        {/* Dashboard */}
         <Route
           path="/"
           element={<Dashboard />}
         />
 
+        {/* Cars */}
         <Route
           path="/cars"
           element={<CarList />}
@@ -54,20 +80,23 @@ function App() {
         />
 
         <Route
-          path="/customers"
-          element={<Customers />}
-        />
-
-        <Route
           path="/cars/:id"
           element={<CarWorkspace />}
         />
 
+        {/* Customers */}
+        <Route
+          path="/customers"
+          element={<Customers />}
+        />
+
+        {/* Settings */}
         <Route
           path="/settings"
           element={<Settings />}
         />
 
+        {/* AI */}
         <Route
           path="/ai-history"
           element={<AIHistory />}
@@ -78,6 +107,7 @@ function App() {
           element={<AIWorkspace />}
         />
 
+        {/* Campaign */}
         <Route
           path="/campaign"
           element={<CampaignPage />}
@@ -121,10 +151,7 @@ function App() {
       </Route>
 
     </Routes>
-
   );
-
 }
-
 
 export default App;

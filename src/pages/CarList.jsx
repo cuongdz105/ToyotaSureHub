@@ -1,14 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
-    getCars,
-    deleteCar,
-    markCarAsSold,
-    restoreSoldCar,
-    getSoldDaysRemaining,
+    getCarsFromSupabase,
+    deleteCarFromSupabase,
+    markCarAsSoldInSupabase,
+    restoreSoldCarInSupabase,
+    getSoldDaysRemainingFromSupabase,
     SOLD_STATUS,
-} from "../services/carService";
+} from "../services/carSupabaseService";
 
 import {
     deleteCampaignsByCarId,
@@ -32,8 +32,13 @@ function CarList() {
     const navigate =
         useNavigate();
 
-    const [cars, setCars] =
-        useState(getCars());
+    const [cars, setCars] = useState([]);
+const [loading, setLoading] = useState(true);
+const [error, setError] = useState("");
+
+useEffect(() => {
+    refreshCars();
+}, []);
 
     const [search, setSearch] =
         useState("");
@@ -46,11 +51,29 @@ function CarList() {
     // REFRESH
     // ==========================================
 
-    function refreshCars() {
-        setCars(
-            getCars()
+    async function refreshCars() {
+    try {
+        setLoading(true);
+        setError("");
+
+        const data =
+            await getCarsFromSupabase();
+
+        setCars(data);
+    } catch (err) {
+        console.error(
+            "Lỗi tải xe từ Supabase:",
+            err
         );
+
+        setError(
+            err?.message ||
+            "Không thể tải danh sách xe."
+        );
+    } finally {
+        setLoading(false);
     }
+}
 
 
     // ==========================================
@@ -94,7 +117,7 @@ function CarList() {
     // DELETE NORMAL CAR
     // ==========================================
 
-    function handleDelete(id) {
+    async function handleDelete(id) {
   const car = cars.find(
     (item) =>
       String(item.id) === String(id)
@@ -123,9 +146,16 @@ function CarList() {
 
   if (!ok) return;
 
-  deleteCar(id);
+  try {
+    await deleteCarFromSupabase(id);
+    await refreshCars();
+} catch (err) {
+    console.error(err);
 
-  refreshCars();
+    alert(
+        `❌ Không thể xóa xe.\n\n${err?.message || err}`
+    );
+}
 }
 
 
@@ -133,9 +163,9 @@ function CarList() {
     // MARK CAR AS SOLD
     // ==========================================
 
-    function handleMarkAsSold(
-        car
-    ) {
+   async function handleMarkAsSold(
+    car
+) {
 
         const campaignsCount =
             (() => {
@@ -284,12 +314,21 @@ function CarList() {
         // 3. CHUYỂN XE SANG ĐÃ BÁN
         // --------------------------------------
 
-        markCarAsSold(
-            car.id
-        );
+        try {
+    await markCarAsSoldInSupabase(
+        car.id
+    );
 
+    await refreshCars();
+} catch (err) {
+    console.error(err);
 
-        refreshCars();
+    alert(
+        `❌ Không thể chuyển xe sang Đã bán.\n\n${err?.message || err}`
+    );
+
+    return;
+}
 
 
         console.log(
@@ -321,9 +360,9 @@ function CarList() {
     // RESTORE SOLD CAR
     // ==========================================
 
-    function handleRestore(
-        car
-    ) {
+    async function handleRestore(
+    car
+) {
 
         const ok =
             window.confirm(
@@ -344,13 +383,24 @@ function CarList() {
         }
 
 
-        const newCar =
-            restoreSoldCar(
-                car.id
-            );
+        let newCar;
 
+try {
+    newCar =
+        await restoreSoldCarInSupabase(
+            car.id
+        );
 
-        refreshCars();
+    await refreshCars();
+} catch (err) {
+    console.error(err);
+
+    alert(
+        `❌ Không thể nhập lại xe.\n\n${err?.message || err}`
+    );
+
+    return;
+}
 
 
         // Chuyển về tab đang bán
@@ -492,6 +542,34 @@ function CarList() {
                 />
 
 
+{loading && (
+    <div
+        style={{
+            background: "#fff",
+            padding: "30px",
+            borderRadius: "15px",
+            marginBottom: "20px",
+            textAlign: "center",
+        }}
+    >
+        ⏳ Đang tải danh sách xe từ Supabase...
+    </div>
+)}
+
+{error && (
+    <div
+        style={{
+            background: "#fff0f0",
+            color: "#d71920",
+            padding: "20px",
+            borderRadius: "15px",
+            marginBottom: "20px",
+        }}
+    >
+        ❌ {error}
+    </div>
+)}
+
                 {/* ACTIVE TAB */}
                 {activeTab ===
                     "active" && (
@@ -557,9 +635,9 @@ function CarList() {
                                     ) => {
 
                                         const days =
-                                            getSoldDaysRemaining(
-                                                car
-                                            );
+    getSoldDaysRemainingFromSupabase(
+        car
+    );
 
                                         return (
 

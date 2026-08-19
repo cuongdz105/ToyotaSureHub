@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import { getCarById, updateCar } from "../services/carService";
+import {
+  getCarByIdFromSupabase,
+  updateCarInSupabase,
+} from "../services/carSupabaseService";
 import Gallery from "../components/Gallery/Gallery";
 import "../styles/CarWorkspace.css";
 
@@ -36,8 +39,9 @@ function CarWorkspace() {
   const { id } = useParams();
 
 
-  const [car, setCar] =
-    useState(() => getCarById(id));
+  const [car, setCar] = useState(null);
+  const [loadingCar, setLoadingCar] = useState(true);
+  const [carError, setCarError] = useState("");
 
 
   const [showAI, setShowAI] =
@@ -65,23 +69,61 @@ function CarWorkspace() {
 
 
   // =======================================
-  // REFRESH XE
+  // LOAD / REFRESH XE FROM SUPABASE
   // =======================================
 
-  const refreshCar = () => {
+  const refreshCar = async () => {
+    try {
+      const updatedCar = await getCarByIdFromSupabase(id);
 
-    const updatedCar =
-      getCarById(id);
-
-
-    if (updatedCar) {
+      if (!updatedCar) {
+        setCar(null);
+        setCarError("Không tìm thấy xe trên Supabase.");
+        return null;
+      }
 
       setCar(updatedCar);
-
+      setCarError("");
+      return updatedCar;
+    } catch (error) {
+      console.error("Load car from Supabase error:", error);
+      setCarError(error.message || "Không thể tải xe.");
+      return null;
     }
-
   };
 
+  useEffect(() => {
+    setLoadingCar(true);
+    refreshCar().finally(() => setLoadingCar(false));
+  }, [id]);
+
+  const saveCarUpdate = async (updatedData) => {
+    const updatedCar = await updateCarInSupabase(id, updatedData);
+    setCar(updatedCar);
+    return updatedCar;
+  };
+
+
+  if (loadingCar) {
+    return (
+      <div className="app">
+        <main className="content">
+          <h1>🚗 Đang tải xe...</h1>
+        </main>
+      </div>
+    );
+  }
+
+  if (carError || !car) {
+    return (
+      <div className="app">
+        <main className="content">
+          <h1>❌ Không tìm thấy xe</h1>
+          <p>{carError || "Xe không tồn tại trên Supabase."}</p>
+        </main>
+      </div>
+    );
+  }
 
   // =======================================
   // RESEARCH CONTEXT
@@ -155,9 +197,7 @@ function CarWorkspace() {
   );
 
 
-        updateCar(
-          car.id,
-          {
+        await saveCarUpdate({
             aiContent: {
               ...(car.aiContent || {}),
               youtubeScript:
@@ -167,7 +207,7 @@ function CarWorkspace() {
         );
 
 
-        refreshCar();
+        await refreshCar();
 
 
         setAiContent(
@@ -256,9 +296,7 @@ const result =
   );
 
 
-        updateCar(
-          car.id,
-          {
+        await saveCarUpdate({
             aiContent: {
               ...(car.aiContent || {}),
               youtube:
@@ -268,7 +306,7 @@ const result =
         );
 
 
-        refreshCar();
+        await refreshCar();
 
 
         setAiContent(
@@ -351,9 +389,7 @@ const result =
           );
 
 
-        updateCar(
-          car.id,
-          {
+        await saveCarUpdate({
             aiContent: {
               ...(car.aiContent || {}),
               facebook:
@@ -363,7 +399,7 @@ const result =
         );
 
 
-        refreshCar();
+        await refreshCar();
 
 
         setAiContent(
@@ -464,9 +500,7 @@ const result =
   );
 
 
-        updateCar(
-          car.id,
-          {
+        await saveCarUpdate({
             aiContent: {
               ...(car.aiContent || {}),
               tiktokScript:
@@ -476,7 +510,7 @@ const result =
         );
 
 
-        refreshCar();
+        await refreshCar();
 
 
         setAiContent(
@@ -565,9 +599,7 @@ const result =
   );
 
 
-        updateCar(
-          car.id,
-          {
+        await saveCarUpdate({
             aiContent: {
               ...(car.aiContent || {}),
               tiktok:
@@ -577,7 +609,7 @@ const result =
         );
 
 
-        refreshCar();
+        await refreshCar();
 
 
         setAiContent(
@@ -655,9 +687,7 @@ const result =
           );
 
 
-        updateCar(
-          car.id,
-          {
+        await saveCarUpdate({
             aiContent: {
               ...(car.aiContent || {}),
               seo:
@@ -667,7 +697,7 @@ const result =
         );
 
 
-        refreshCar();
+        await refreshCar();
 
 
         setAiContent(
@@ -745,9 +775,7 @@ const result =
           );
 
 
-        updateCar(
-          car.id,
-          {
+        await saveCarUpdate({
             aiContent: {
               ...(car.aiContent || {}),
               thumbnail:
@@ -757,7 +785,7 @@ const result =
         );
 
 
-        refreshCar();
+        await refreshCar();
 
 
         setAiContent(
@@ -976,9 +1004,7 @@ ${ai.thumbnail || "Chưa có"}
           );
 
 
-        updateCar(
-          car.id,
-          {
+        await saveCarUpdate({
             aiContent:
               result,
           }

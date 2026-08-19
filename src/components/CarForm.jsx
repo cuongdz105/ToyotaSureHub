@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 
-import { addCar, updateCar } from "../services/carService";
+import {
+  createCarInSupabase,
+  updateCarInSupabase,
+} from "../services/carSupabaseService";
 
 import { brands } from "../data/brands";
 import { colors } from "../data/colors";
@@ -49,6 +52,13 @@ function CarForm({ editCar }) {
   );
 
 
+  useEffect(() => {
+    if (editCar) {
+      setCar(editCar);
+    }
+  }, [editCar]);
+
+
   // ==========================================
   // AI VISION STATE
   // ==========================================
@@ -58,6 +68,10 @@ function CarForm({ editCar }) {
 
   const [visionResult, setVisionResult] =
     useState(null);
+
+  // Chống double-click / double-submit khi Supabase đang lưu.
+  const [saving, setSaving] =
+    useState(false);
 
 
   // ==========================================
@@ -211,7 +225,13 @@ function CarForm({ editCar }) {
   // LƯU XE
   // ==========================================
 
-  function handleSave() {
+  async function handleSave() {
+
+    // Khóa cứng ngay từ đầu: dù ông bấm nhiều lần,
+    // chỉ request đầu tiên được phép chạy.
+    if (saving) {
+      return;
+    }
 
     if (!car.brand) {
 
@@ -241,26 +261,61 @@ function CarForm({ editCar }) {
     // LƯU XE
     // ==========================================
 
+    setSaving(true);
+
     if (editCar) {
 
-      updateCar(
-        car.id,
-        car
-      );
+      try {
+        await updateCarInSupabase(car.id, car);
 
-      alert(
-        "✅ Đã cập nhật xe"
-      );
+        alert(
+          "✅ Đã cập nhật xe trên Supabase"
+        );
+      } catch (error) {
+        console.error(
+          "Update car Supabase error:",
+          error
+        );
+
+        alert(
+          `❌ Không thể cập nhật xe: ${
+            error.message || "Lỗi Supabase"
+          }`
+        );
+
+        setSaving(false);
+        return;
+      }
 
     } else {
 
-      addCar(car);
+  try {
 
-      alert(
-        "✅ Đã thêm xe"
-      );
+    await createCarInSupabase(car);
 
-    }
+    alert(
+      "✅ Đã thêm xe vào Supabase"
+    );
+
+  } catch (error) {
+
+    console.error(
+      "Create car Supabase error:",
+      error
+    );
+
+    alert(
+      `❌ Không thể lưu xe: ${
+        error.message || "Lỗi Supabase"
+      }`
+    );
+
+    setSaving(false);
+    return;
+  }
+
+  setSaving(false);
+}
 
 
     // ==========================================
@@ -275,6 +330,8 @@ function CarForm({ editCar }) {
 
 
     if (returnTo === "queue") {
+
+      setSaving(false);
 
       const queueUrl = jobId
         ? `/facebook/queue?focusJobId=${encodeURIComponent(
