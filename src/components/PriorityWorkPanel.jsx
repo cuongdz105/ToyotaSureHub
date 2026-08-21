@@ -5,57 +5,49 @@ import {
   getDashboardWorkItems,
 } from "../services/dashboardWorkService";
 
-/*
- * ToyotaSureHub V11
- * Dashboard Priority Work Center
- *
- * Mục tiêu:
- * - Dashboard không còn chỉ hiển thị số liệu.
- * - Hiển thị "việc tiếp theo nên làm".
- * - Nếu Queue/Campaign đang dở -> đi thẳng Queue.
- * - Nếu là xe mới cần đăng -> chuyển sang Facebook Posting
- *   sau khi ghi "posting intent" để bước tiếp theo có thể
- *   nhận đúng xe/account.
- *
- * LƯU Ý:
- * postingSessionService hiện đang expose getCurrentPosting()
- * nhưng source hiện có chưa cho thấy setter tương ứng.
- *
- * Vì vậy panel ghi intent vào sessionStorage.
- */
 
 const V11_INTENT_KEY =
   "toyota_sure_hub_v11_posting_intent";
 
 
 function formatCarLabel(task) {
+
   if (task?.carLabel) {
     return task.carLabel;
   }
 
+
   if (task?.car) {
+
     const car = task.car;
 
     let odo = "";
+
 
     if (
       car.odo !== undefined &&
       car.odo !== null &&
       car.odo !== ""
     ) {
-      const odoValue = Number(car.odo);
+
+      const odoValue =
+        Number(car.odo);
+
 
       if (!Number.isNaN(odoValue)) {
-        // ToyotaSureHub quy ước:
-        // 5.5 = 5,5 vạn km
-        // 8.6 = 8,6 vạn km
-        // 12 = 12 vạn km
 
-        odo = `${odoValue.toLocaleString("vi-VN", {
-          maximumFractionDigits: 1,
-        })} vạn km`;
+        odo =
+          `${odoValue.toLocaleString(
+            "vi-VN",
+            {
+              maximumFractionDigits: 1,
+            }
+          )} vạn km`;
+
       }
+
     }
+
 
     return [
       car.brand,
@@ -67,51 +59,108 @@ function formatCarLabel(task) {
     ]
       .filter(Boolean)
       .join(" · ");
+
   }
+
 
   return task?.carId
     ? `Xe #${task.carId}`
     : "Xe chưa xác định";
+
 }
+
 
 function getTaskMeta(task) {
 
   if (task.type === "queue") {
+
     return {
       icon: "📋",
       title: "Đang có việc Facebook dở",
       button: "📋 Vào Queue",
     };
+
   }
+
 
   return {
     icon: "🚀",
     title: "Xe cần được đẩy tin",
     button: "🚀 Bắt đầu đăng",
   };
+
 }
 
 
 function PriorityWorkPanel() {
 
-  const navigate = useNavigate();
+  const navigate =
+    useNavigate();
+
 
   const [tasks, setTasks] =
     useState([]);
 
+
+  // Chỉ loading ở lần tải đầu tiên.
   const [loading, setLoading] =
     useState(true);
 
 
-  function refresh() {
+  // Khi cập nhật sau đó,
+  // giữ nguyên dữ liệu cũ.
+  const [refreshing, setRefreshing] =
+    useState(false);
+
+
+  const [error, setError] =
+    useState("");
+
+
+  async function refresh(
+    isInitial = false
+  ) {
 
     try {
 
-      setLoading(true);
+      if (isInitial) {
+
+        setLoading(true);
+
+      } else {
+
+        setRefreshing(true);
+
+      }
+
+
+      setError("");
+
+
+      const items =
+        await getDashboardWorkItems();
+
+
+      const nextTasks =
+        Array.isArray(items)
+          ? items
+          : [];
+
+
+      /*
+       * QUAN TRỌNG:
+       *
+       * Không setTasks([])
+       * trước khi tải xong.
+       *
+       * Dữ liệu cũ vẫn được giữ trên màn hình
+       * trong lúc refresh.
+       */
 
       setTasks(
-        getDashboardWorkItems()
+        nextTasks
       );
+
 
     } catch (error) {
 
@@ -120,28 +169,67 @@ function PriorityWorkPanel() {
         error
       );
 
-      setTasks([]);
+
+      /*
+       * Nếu đã có dữ liệu cũ,
+       * không xóa dữ liệu đó chỉ vì
+       * một lần refresh bị lỗi.
+       */
+
+      if (tasks.length === 0) {
+
+        setError(
+          error?.message ||
+          "Không thể tải việc ưu tiên."
+        );
+
+      } else {
+
+        console.warn(
+          "Không cập nhật được Priority Work Panel, giữ dữ liệu cũ."
+        );
+
+      }
 
     } finally {
 
-      setLoading(false);
+      if (isInitial) {
+
+        setLoading(false);
+
+      } else {
+
+        setRefreshing(false);
+
+      }
 
     }
+
   }
 
 
   useEffect(() => {
 
-    refresh();
+    refresh(true);
+
+
+    /*
+     * Chỉ refresh khi dữ liệu từ tab khác
+     * phát sinh storage event.
+     */
 
     const handleStorage = () => {
-      refresh();
+
+      refresh(false);
+
     };
+
 
     window.addEventListener(
       "storage",
       handleStorage
     );
+
 
     return () => {
 
@@ -162,34 +250,17 @@ function PriorityWorkPanel() {
     }
 
 
-    /*
-     * ================================
-     * QUEUE
-     * ================================
-     */
+    if (
+      task.type === "queue"
+    ) {
 
-    if (task.type === "queue") {
-
-      navigate("/facebook/queue");
+      navigate(
+        "/facebook/queue"
+      );
 
       return;
     }
 
-
-    /*
-     * ================================
-     * BẮT ĐẦU CHIẾN DỊCH MỚI
-     * ================================
-     *
-     * Không nhét full car vào URL.
-     *
-     * Chỉ truyền:
-     * - carId
-     * - accountId gợi ý
-     *
-     * Facebook Posting sẽ lấy xe thật
-     * từ carService.
-     */
 
     sessionStorage.setItem(
       V11_INTENT_KEY,
@@ -211,14 +282,17 @@ function PriorityWorkPanel() {
     );
 
 
-    navigate("/facebook/post");
+    navigate(
+      "/facebook/post"
+    );
+
   }
 
 
   /*
-   * ================================
-   * LOADING
-   * ================================
+   * ========================================
+   * INITIAL LOADING
+   * ========================================
    */
 
   if (loading) {
@@ -239,18 +313,21 @@ function PriorityWorkPanel() {
       </section>
 
     );
+
   }
 
 
   /*
-   * ================================
-   * UI
-   * ================================
+   * ========================================
+   * MAIN
+   * ========================================
    */
 
   return (
 
     <section className="section-card">
+
+      {/* HEADER */}
 
       <div
         style={{
@@ -279,8 +356,8 @@ function PriorityWorkPanel() {
               color: "#777",
             }}
           >
-            ToyotaSureHub tự xếp thứ tự ưu tiên
-            dựa trên Queue, Campaign và tình trạng xe.
+            ToyotaSureHub tự xếp thứ tự ưu tiên dựa trên
+            Queue, Campaign và tình trạng xe.
           </p>
 
         </div>
@@ -288,27 +365,94 @@ function PriorityWorkPanel() {
 
         <button
           type="button"
-          onClick={refresh}
+          onClick={() =>
+            refresh(false)
+          }
+          disabled={refreshing}
           style={{
-            border: "1px solid #ddd",
-            background: "#fff",
-            borderRadius: 8,
-            padding: "8px 12px",
-            cursor: "pointer",
+            border:
+              "1px solid #ddd",
+
+            background:
+              "#fff",
+
+            borderRadius:
+              8,
+
+            padding:
+              "8px 12px",
+
+            cursor:
+              refreshing
+                ? "not-allowed"
+                : "pointer",
+
+            opacity:
+              refreshing
+                ? 0.65
+                : 1,
+
+            whiteSpace:
+              "nowrap",
           }}
         >
-          ↻ Cập nhật
+
+          {refreshing
+            ? "⏳ Đang cập nhật..."
+            : "↻ Cập nhật"}
+
         </button>
 
       </div>
 
 
-      {tasks.length === 0 ? (
+      {/* =================================
+          REFRESH STATUS
+      ================================= */}
+
+      {refreshing && (
+
+        <div
+          style={{
+            marginBottom: 10,
+            color: "#777",
+            fontSize: 12,
+          }}
+        >
+          🔄 Đang cập nhật việc ưu tiên...
+        </div>
+
+      )}
+
+
+      {/* =================================
+          ERROR
+      ================================= */}
+
+      {error ? (
+
+        <div
+          style={{
+            padding: 14,
+            border:
+              "1px solid #f1b5b5",
+            borderRadius: 10,
+            background:
+              "#fff5f5",
+            color:
+              "#b42318",
+          }}
+        >
+          ❌ {error}
+        </div>
+
+      ) : tasks.length === 0 ? (
 
         <div
           style={{
             padding: 20,
-            border: "1px dashed #ddd",
+            border:
+              "1px dashed #ddd",
             borderRadius: 10,
             color: "#777",
           }}
@@ -325,148 +469,212 @@ function PriorityWorkPanel() {
           }}
         >
 
-          {tasks.map((task, index) => {
+          {tasks.map(
+            (task, index) => {
 
-            const meta =
-              getTaskMeta(task);
+              const meta =
+                getTaskMeta(task);
 
 
-            return (
-
-              <div
-                key={`${task.carId}-${index}`}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns:
-                    "38px minmax(0, 1fr) auto",
-                  alignItems: "center",
-                  gap: 12,
-                  padding: 14,
-                  border:
-                    "1px solid #e8e8e8",
-                  borderRadius: 12,
-                  background:
-                    index === 0
-                      ? "#fffaf0"
-                      : "#fff",
-                }}
-              >
-
-                {/* ICON */}
+              return (
 
                 <div
-                  style={{
-                    fontSize: 24,
-                    textAlign: "center",
-                  }}
-                >
-                  {meta.icon}
-                </div>
-
-
-                {/* CONTENT */}
-
-                <div
-                  style={{
-                    minWidth: 0,
-                  }}
-                >
-
-                  <div
-                    style={{
-                      fontWeight: 700,
-                    }}
-                  >
-                    {formatCarLabel(task) ||
-                      `Xe #${task.carId}`}
-                  </div>
-
-
-                  <div
-                    style={{
-                      marginTop: 3,
-                      color: "#666",
-                      fontSize: 13,
-                    }}
-                  >
-                    {meta.title}
-                    {" · "}
-                    <strong>
-                      {task.score}
-                    </strong>{" "}
-                    điểm
-                  </div>
-
-
-                  <div
-                    style={{
-                      marginTop: 6,
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 6,
-                    }}
-                  >
-
-                    {(task.reasons || []).map(
-                      (reason) => (
-
-                        <span
-                          key={reason}
-                          style={{
-                            fontSize: 12,
-                            padding:
-                              "4px 7px",
-                            borderRadius: 999,
-                            background:
-                              "#f3f3f3",
-                          }}
-                        >
-                          {reason}
-                        </span>
-
-                      )
-                    )}
-
-                  </div>
-
-                </div>
-
-
-                {/* ACTION */}
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleTask(task)
+                  key={
+                    `${task.carId}-${index}`
                   }
                   style={{
-                    border: "none",
-                    borderRadius: 9,
-                    padding:
-                      "10px 14px",
-                    background:
-                    task.type === "queue"
-                        ? "#f3f3f3"
-                        : "#d71920",
+                    display:
+                      "grid",
 
-                    color:
-                    task.type === "queue"
-                        ? "#111"
+                    gridTemplateColumns:
+                      "38px minmax(0, 1fr) auto",
+
+                    alignItems:
+                      "center",
+
+                    gap:
+                      12,
+
+                    padding:
+                      14,
+
+                    border:
+                      "1px solid #e8e8e8",
+
+                    borderRadius:
+                      12,
+
+                    background:
+                      index === 0
+                        ? "#fffaf0"
                         : "#fff",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    whiteSpace:
-                      "nowrap",
+
+                    transition:
+                      "opacity 0.15s ease",
                   }}
                 >
-                  {meta.button}
-                </button>
 
-              </div>
+                  {/* ICON */}
 
-            );
+                  <div
+                    style={{
+                      fontSize:
+                        24,
 
-          })}
+                      textAlign:
+                        "center",
+                    }}
+                  >
+                    {meta.icon}
+                  </div>
+
+
+                  {/* CONTENT */}
+
+                  <div
+                    style={{
+                      minWidth:
+                        0,
+                    }}
+                  >
+
+                    <div
+                      style={{
+                        fontWeight:
+                          700,
+                      }}
+                    >
+                      {formatCarLabel(
+                        task
+                      ) ||
+                        `Xe #${task.carId}`}
+                    </div>
+
+
+                    <div
+                      style={{
+                        marginTop:
+                          3,
+
+                        color:
+                          "#666",
+
+                        fontSize:
+                          13,
+                      }}
+                    >
+                      {meta.title}
+
+                      {" · "}
+
+                      <strong>
+                        {task.score}
+                      </strong>{" "}
+                      điểm
+                    </div>
+
+
+                    <div
+                      style={{
+                        marginTop:
+                          6,
+
+                        display:
+                          "flex",
+
+                        flexWrap:
+                          "wrap",
+
+                        gap:
+                          6,
+                      }}
+                    >
+
+                      {(
+                        task.reasons ||
+                        []
+                      ).map(
+                        (reason) => (
+
+                          <span
+                            key={
+                              reason
+                            }
+                            style={{
+                              fontSize:
+                                12,
+
+                              padding:
+                                "4px 7px",
+
+                              borderRadius:
+                                999,
+
+                              background:
+                                "#f3f3f3",
+                            }}
+                          >
+                            {reason}
+                          </span>
+
+                        )
+                      )}
+
+                    </div>
+
+                  </div>
+
+
+                  {/* ACTION */}
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleTask(
+                        task
+                      )
+                    }
+                    style={{
+                      border:
+                        "none",
+
+                      borderRadius:
+                        9,
+
+                      padding:
+                        "10px 14px",
+
+                      background:
+                        task.type ===
+                        "queue"
+                          ? "#f3f3f3"
+                          : "#d71920",
+
+                      color:
+                        task.type ===
+                        "queue"
+                          ? "#111"
+                          : "#fff",
+
+                      fontWeight:
+                        700,
+
+                      cursor:
+                        "pointer",
+
+                      whiteSpace:
+                        "nowrap",
+                    }}
+                  >
+                    {meta.button}
+                  </button>
+
+                </div>
+
+              );
+
+            }
+          )}
 
         </div>
 
@@ -475,6 +683,7 @@ function PriorityWorkPanel() {
     </section>
 
   );
+
 }
 
 

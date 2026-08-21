@@ -18,6 +18,9 @@ import FacebookGroups from "./pages/Facebook/FacebookGroups";
 import FacebookPostPreview from "./pages/Facebook/FacebookPostPreview";
 import FacebookPostingQueue from "./pages/Facebook/FacebookPostingQueue";
 import SupabaseCarTest from "./pages/SupabaseCarTest";
+import Login from "./pages/Login";
+import { AuthProvider } from "./contexts/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 // =======================================
 // CONTENT LIBRARY
@@ -34,7 +37,8 @@ import SupabaseTest from "./pages/SupabaseTest";
 
 function App() {
   return (
-    <Routes>
+    <AuthProvider>
+      <Routes>
 
       {/* =================================
           SUPABASE TEST
@@ -55,7 +59,18 @@ function App() {
   element={<SupabaseCarTest />}
 />
 
-      <Route element={<MainLayout />}>
+<Route
+  path="/login"
+  element={<Login />}
+/>
+
+      <Route
+  element={
+    <ProtectedRoute>
+      <MainLayout />
+    </ProtectedRoute>
+  }
+>
 
         {/* Dashboard */}
         <Route
@@ -150,7 +165,8 @@ function App() {
 
       </Route>
 
-    </Routes>
+          </Routes>
+    </AuthProvider>
   );
 }
 

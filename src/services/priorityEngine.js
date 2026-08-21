@@ -1,4 +1,4 @@
-import { getCars } from "./carService";
+import { getActiveCarsFromSupabase } from "./carSupabaseService";
 import { loadPostingQueue } from "./facebookPostingQueueService";
 import { loadCampaigns } from "./facebookCampaignService";
 import { loadAccounts } from "./facebookAccountService";
@@ -458,9 +458,9 @@ function buildReasons({
 
   }
   else if (
-    daysSinceLastPosting >=
-    3
-  ) {
+  daysSinceLastPosting >=
+  3
+) {
 
     reasons.push(
       `${daysSinceLastPosting} ngày chưa đăng lại`
@@ -905,55 +905,84 @@ export function calculateCarPriority({
 }
 
 
-export function getPriorityTasks() {
-
-  /*
-  QUAN TRỌNG:
-  Project hiện tại dùng getCars(),
-  không dùng getActiveCars().
-  */
+export async function getPriorityTasks() {
 
   const cars =
-    getCars();
+    await getActiveCarsFromSupabase();
 
+
+  /*
+  ========================================
+  CHỈ GIỮ CAMPAIGN CỦA XE ĐANG TỒN TẠI
+  ========================================
+  */
+
+  const activeCarIds =
+    new Set(
+      cars.map((car) =>
+        String(car?.id)
+      )
+    );
+
+
+  /*
+  ========================================
+  QUEUE
+  ========================================
+  */
 
   const queue =
-    loadPostingQueue();
+    loadPostingQueue().filter((job) =>
+      activeCarIds.has(
+        String(job?.carId)
+      )
+    );
 
+
+  /*
+  ========================================
+  CAMPAIGN
+  ========================================
+  */
 
   const campaigns =
-    loadCampaigns();
+    loadCampaigns().filter((campaign) =>
+      activeCarIds.has(
+        String(campaign?.carId)
+      )
+    );
 
+
+  /*
+  ========================================
+  FACEBOOK ACCOUNTS / GROUPS
+  ========================================
+  */
 
   const accounts =
     loadAccounts();
-
 
   const groups =
     loadGroups();
 
 
+  /*
+  ========================================
+  TÍNH PRIORITY
+  ========================================
+  */
+
   return cars
-
-    .map(
-      (car) =>
-        calculateCarPriority({
-
-          car,
-
-          queue,
-
-          campaigns,
-
-          accounts,
-
-          groups,
-
-        })
+    .map((car) =>
+      calculateCarPriority({
+        car,
+        queue,
+        campaigns,
+        accounts,
+        groups,
+      })
     )
-
     .filter(Boolean)
-
     .sort(
       (a, b) =>
         b.score - a.score

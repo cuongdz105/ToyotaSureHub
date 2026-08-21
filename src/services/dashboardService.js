@@ -1,20 +1,19 @@
-import { getCars } from "./carService";
+import { getActiveCarsFromSupabase } from "./carService";
 
-export function getDashboardData() {
-  const cars = getCars();
+export async function getDashboardData() {
+  const cars = await getActiveCarsFromSupabase();
 
-  const totalCars = cars.length;
-
-  const sellingCars = cars.filter(
-    (car) => car.status === "🟢 Đang bán"
-  ).length;
+  const activeCars = cars.filter(
+    (car) => car.status !== "🔴 Đã bán"
+  );
 
   const soldCars = cars.filter(
     (car) => car.status === "🔴 Đã bán"
-  ).length;
+  );
 
-  const inventoryValue = cars.reduce(
-    (total, car) => total + Number(car.price),
+  const inventoryValue = activeCars.reduce(
+    (total, car) =>
+      total + Number(car.price || 0),
     0
   );
 
@@ -22,17 +21,17 @@ export function getDashboardData() {
     {
       icon: "🚗",
       title: "Xe trong kho",
-      value: totalCars,
+      value: activeCars.length,
     },
     {
       icon: "🟢",
       title: "Đang bán",
-      value: sellingCars,
+      value: activeCars.length,
     },
     {
       icon: "🔴",
       title: "Đã bán",
-      value: soldCars,
+      value: soldCars.length,
     },
     {
       icon: "💰",

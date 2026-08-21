@@ -1,19 +1,23 @@
-import { getWorkPlan } from "./workPlanService";
+import {
+  getWorkPlan,
+} from "./workPlanService";
 
 
-export function getDashboardWorkItems() {
+export async function getDashboardWorkItems() {
 
   const plan =
-    getWorkPlan();
+    await getWorkPlan();
+
 
   return plan.slice(0, 8);
+
 }
 
 
-export function getDashboardWorkSummary() {
+export async function getDashboardWorkSummary() {
 
   const plan =
-    getWorkPlan();
+    await getWorkPlan();
 
 
   return {
@@ -41,4 +45,5 @@ export function getDashboardWorkSummary() {
       ).length,
 
   };
+
 }

@@ -26,9 +26,7 @@ function loadStoredPlan() {
       JSON.parse(raw);
 
 
-    return Array.isArray(
-      parsed
-    )
+    return Array.isArray(parsed)
       ? parsed
       : [];
 
@@ -46,9 +44,7 @@ function loadStoredPlan() {
 }
 
 
-function saveStoredPlan(
-  plan
-) {
+function saveStoredPlan(plan) {
 
   localStorage.setItem(
     WORK_PLAN_KEY,
@@ -60,21 +56,24 @@ function saveStoredPlan(
 
 /*
 ========================================
-WORK PLAN ĐỘNG
+WORK PLAN ĐỘNG - SUPABASE
 ========================================
 
-Không phải lịch cứng.
+Nguồn xe thực tế nằm ở Supabase thông qua
+priorityEngine.
 
 Mỗi lần Dashboard mở:
-→ đọc lại dữ liệu
+→ đọc lại xe đang bán từ Supabase
 → tính lại Priority
+→ loại toàn bộ task của xe không còn tồn tại
+→ giữ lại firstSeen/status cho xe còn tồn tại
 → sắp xếp lại.
 */
 
-export function getWorkPlan() {
+export async function getWorkPlan() {
 
   const tasks =
-    getPriorityTasks();
+    await getPriorityTasks();
 
 
   const previous =
@@ -85,46 +84,61 @@ export function getWorkPlan() {
     new Date().toISOString();
 
 
-  const nextPlan =
-    tasks.map(
-      (task) => {
-
-        const old =
-          previous.find(
-            (item) =>
-              String(
-                item.carId
-              ) ===
-              String(
-                task.carId
-              )
-          );
-
-
-        return {
-
-          ...task,
-
-          firstSeenAt:
-            old?.firstSeenAt ||
-            now,
-
-          lastEvaluatedAt:
-            now,
-
-          status:
-            old?.status ||
-            "pending",
-
-        };
-
-      }
+  const activeCarIds =
+    new Set(
+      tasks.map((task) =>
+        String(task.carId)
+      )
     );
 
 
-  saveStoredPlan(
-    nextPlan
-  );
+  // Dọn task mồ côi khỏi localStorage.
+  // Chỉ giữ những task vẫn thuộc xe đang có trong
+  // Priority Engine / Supabase.
+  const validPrevious =
+    previous.filter((item) =>
+      activeCarIds.has(
+        String(item.carId)
+      )
+    );
+
+
+  const nextPlan =
+    tasks.map((task) => {
+
+      const old =
+        validPrevious.find(
+          (item) =>
+            String(item.carId) ===
+            String(task.carId)
+        );
+
+
+      return {
+
+        ...task,
+
+        firstSeenAt:
+          old?.firstSeenAt ||
+          now,
+
+        lastEvaluatedAt:
+          now,
+
+        status:
+          old?.status ||
+          "pending",
+
+        startedAt:
+          old?.startedAt ||
+          null,
+
+      };
+
+    });
+
+
+  saveStoredPlan(nextPlan);
 
 
   return nextPlan;
@@ -132,16 +146,18 @@ export function getWorkPlan() {
 }
 
 
-export function getWorkPlanTask(
+export async function getWorkPlanTask(
   carId
 ) {
 
+  const plan =
+    await getWorkPlan();
+
+
   return (
-    getWorkPlan().find(
+    plan.find(
       (task) =>
-        String(
-          task.carId
-        ) ===
+        String(task.carId) ===
         String(carId)
     ) || null
   );
@@ -149,51 +165,44 @@ export function getWorkPlanTask(
 }
 
 
-export function markWorkPlanStarted(
+export async function markWorkPlanStarted(
   carId
 ) {
 
   const plan =
-    getWorkPlan();
+    await getWorkPlan();
 
 
   const updated =
-    plan.map(
-      (item) =>
+    plan.map((item) =>
 
-        String(
-          item.carId
-        ) ===
-        String(carId)
+      String(item.carId) ===
+      String(carId)
 
-          ? {
+        ? {
 
-              ...item,
+            ...item,
 
-              status:
-                "in_progress",
+            status:
+              "in_progress",
 
-              startedAt:
-                item.startedAt ||
-                new Date().toISOString(),
+            startedAt:
+              item.startedAt ||
+              new Date().toISOString(),
 
-            }
+          }
 
-          : item
+        : item
     );
 
 
-  saveStoredPlan(
-    updated
-  );
+  saveStoredPlan(updated);
 
 
   return (
     updated.find(
       (item) =>
-        String(
-          item.carId
-        ) ===
+        String(item.carId) ===
         String(carId)
     ) || null
   );
@@ -212,16 +221,12 @@ export function clearWorkPlanForCar(
   const updated =
     plan.filter(
       (item) =>
-        String(
-          item.carId
-        ) !==
+        String(item.carId) !==
         String(carId)
     );
 
 
-  saveStoredPlan(
-    updated
-  );
+  saveStoredPlan(updated);
 
 
   return updated;
